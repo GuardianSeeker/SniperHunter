@@ -20,4 +20,4 @@ If you like the program that I've made, you can send a tip at the following link
 
 https://streamlabs.com/guardianseeker/tip
 
-**Yes, this is the same program that SypherPK was using to catch Stream Snipers, I know it got him to ban at least 1 person, so, I'm happy with it overall.
+**Yes, this is the same program that SypherPK was using to catch Stream Snipers, I know it got him to ban at least 1 person, so, I'm happy with it overall.**
