@@ -5,7 +5,7 @@ There's no auto update in this program, don't plan on forcing that in either, if
 
 # Download
 
-Download using the following link for now, instructions will be inside a file called README.txt
+Download from the releases page, you only need to get **SniperHunter.zip**, instructions will be inside a file called README.txt
 
 https://github.com/GuardianSeeker/SniperHunter/releases
 
