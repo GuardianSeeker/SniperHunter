@@ -3,6 +3,8 @@ Got busy with real life stuff and had to put this release on hold. Unfortunately
 
 There's no auto update in this program, don't plan on forcing that in either, if I make an update, the program alerts you on boot that there's a new release and you can come back here to download it.
 
+**Yes, this is the same program that SypherPK was using to catch Stream Snipers, I know it got him to ban at least 1 person, so, I'm happy with it overall.**
+
 # Download
 
 Download from the releases page, you only need to get **SniperHunter.zip**, instructions will be inside a file called README.txt
@@ -19,5 +21,3 @@ https://youtu.be/v3Ft7q0lLJQ
 If you like the program that I've made, you can send a tip at the following link (THE PROGRAM ITSELF IS FREE, if you paid for it, refund and call the scammer out).
 
 https://streamlabs.com/guardianseeker/tip
-
-**Yes, this is the same program that SypherPK was using to catch Stream Snipers, I know it got him to ban at least 1 person, so, I'm happy with it overall.**
