@@ -1,0 +1,10 @@
+{
+	"email": "YourEpicEmail@email.com",
+	"password": "YourEpicPassword",
+	"snipeCounts": 2,
+	"settings": {
+		"xPos": 0,
+		"yPos": 0,
+		"saveFeed": false
+	}
+}
