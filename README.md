@@ -22,3 +22,9 @@ https://youtu.be/v3Ft7q0lLJQ
 If you like the program that I've made, you can send a tip at the following link (THE PROGRAM ITSELF IS FREE, if you paid for it, refund and call the scammer out).
 
 https://streamlabs.com/guardianseeker/tip
+
+# Shoutouts
+Shiqan who created the FortniteReplayDecompressor program which lets me analyze Fortnite replays
+    https://github.com/Shiqan/FortniteReplayDecompressor
+Terbau for creating fortnitepy which I use to retrieve usernames from Epic servers
+    https://github.com/Terbau/fortnitepy
