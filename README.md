@@ -1,3 +1,5 @@
+![alt text](https://i.imgur.com/MeG7RwG.png)
+
 # About
 Fixed up the project and releasing the code, the only code that I've lost since I last worked on this project in June-ish (currently November) is the code for the FortniteReplayDecompressor program. All that did was parse the replay and output a file called playerList.json and you can check out their API at https://github.com/Shiqan/FortniteReplayDecompressor and find the json structure at the bottom of main.py.
 
