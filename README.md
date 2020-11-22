@@ -33,3 +33,6 @@ https://github.com/Shiqan/FortniteReplayDecompressor
 Terbau for creating fortnitepy which I use to retrieve usernames from Epic servers
 
 https://github.com/Terbau/fortnitepy
+
+# Support
+You can join my discord https://discord.gg/vw6Rh6J also if you need help or find bugs to report.
