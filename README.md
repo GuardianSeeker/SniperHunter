@@ -35,4 +35,4 @@ Terbau for creating fortnitepy which I use to retrieve usernames from Epic serve
 https://github.com/Terbau/fortnitepy
 
 # Support
-You can join my discord https://discord.gg/vw6Rh6J also if you need help or find bugs to report.
+You can join my [discord](https://discord.gg/vw6Rh6J) also if you need help or find bugs to report.
