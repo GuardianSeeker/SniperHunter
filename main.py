@@ -16,24 +16,7 @@ import requests
 import subprocess
 import sys
 import webbrowser
-
-# Initial variable setup
-with open("database.json", encoding="utf-8") as f: database = json.load(f)
-f.close()
-with open("config.json", encoding="utf-8") as f: config = json.load(f)
-f.close()
-email = config["email"]
-password = config["password"]
-filename = "device_auths.json"
-version = "1.7"
-fileDelay = perf_counter()
-checkNames = False
-currentView = None
-expandableCanvas = 269
-LAST_WIDTH = 510
-FEED_WIDTH = 642
-PLAY_WIDTH = 510
-SNIP_WIDTH = 510
+import asyncio
 
 # test function for memes
 def testing():
@@ -47,9 +30,7 @@ def replayCreated(event):
 	if ".replay" in fileName:
 		if not loadWatcher:
 			progress.configure(mode="indeterminate")
-			t1 = Thread(target=loading)
-			t1.daemon = True
-			t1.start()
+			Thread(target=loading, daemon=True).start()
 			loadWatcher = True
 		gameHistory.configure(state=NORMAL)
 		current = gameHistory.get(1.0, END).split("\n")
@@ -117,94 +98,93 @@ if __name__ == "__main__":
 	playerObserver.schedule(playerFileHandler, ".", recursive=False)
 
 # Epic Connection, this whole bit basically just watches a file to see if new epic ids are added, and then finds the match names based on that
-def get_device_auth_details():
-	if os.path.isfile(filename):
-		with open(filename, 'r') as fp:
-			return json.load(fp)
-	return {}
+checkNames = False
+class MyClient(fortnitepy.Client):
+	def __init__(self):
+		device_auth_details = self.get_device_auth_details().get(email, {})
+		super().__init__(
+			auth=fortnitepy.AdvancedAuth(
+				email=email,
+				password=password,
+				prompt_authorization_code=True,
+				delete_existing_device_auths=True,
+				**device_auth_details
+			)
+		)
 
-def store_device_auth_details(email, details):
-	existing = get_device_auth_details()
-	existing[email] = details
+	def get_device_auth_details(self):
+		if os.path.isfile(filename):
+			with open(filename, 'r') as fp:
+				return json.load(fp)
+		return {}
 
-	with open(filename, 'w') as fp:
-		json.dump(existing, fp)
+	def store_device_auth_details(self, email, details):
+		existing = self.get_device_auth_details()
+		existing[email] = details
+		with open(filename, 'w') as fp:
+			json.dump(existing, fp)
 
-device_auth_details = get_device_auth_details().get(email, {})
-bot = commands.Bot(
-	command_prefix='!',
-	auth=fortnitepy.AdvancedAuth(
-		email=email,
-		password=password,
-		prompt_authorization_code=True,
-		delete_existing_device_auths=True,
-		**device_auth_details
-	)
-)
+	async def event_device_auth_generate(self, details, email):
+		self.store_device_auth_details(email, details)
 
-@bot.event
-async def event_device_auth_generate(details, email):
-	store_device_auth_details(email, details)
-
-@bot.event
-async def event_ready():
-	global database, checkNames
-	unknowns = 0
-	tracked = 0
-	def incPlayers():
-		if unknowns != 0:
-			bar(tracked / unknowns * 100)
-	def customClear(text):
-		global gameHistory
-		gameHistory.configure(state=NORMAL)
-		current = gameHistory.get(1.0, END).split("\n")
-		current.pop()
-		x = 0
-		while x < len(current):
-			if "watching" in current[x].lower() or "name" in current[x].lower():
-				current.pop(x)
-				x -= 1
-			else: x += 1
-		current.append(text)
-		gameHistory.delete(1.0, END)
-		gameHistory.insert(INSERT, "\n".join(current))
-		gameHistory.see(END)
-		gameHistory.configure(state=DISABLED)
-	def namesValidator():
-		validated = True
-		for player in database["players"]:
-			if not player["name"]:
-				validated = False
-				break
-		if validated:
-			customClear("Names have been updated.")
-			if currentView == "last": displayLast()
-			if saveFeed.get():
-				feedSaver()
-		else: insertText("Name retrieval failed, check connection and try again.", clearing=True)
-	insertText("Connected to Epic as {}".format(bot.user.display_name), clearing=True)
-	while checkNames != None: # better event implementations COULD be made, oh well, works cleanly as is
-		if checkNames:
-			insertText("Updating names...")
+	async def event_ready(self):
+		global database, checkNames
+		unknowns = 0
+		tracked = 0
+		def incPlayers():
+			if unknowns != 0:
+				bar(tracked / unknowns * 100)
+		def customClear(text):
+			global gameHistory
+			gameHistory.configure(state=NORMAL)
+			current = gameHistory.get(1.0, END).split("\n")
+			current.pop()
+			x = 0
+			while x < len(current):
+				if "watching" in current[x].lower() or "name" in current[x].lower():
+					current.pop(x)
+					x -= 1
+				else: x += 1
+			current.append(text)
+			gameHistory.delete(1.0, END)
+			gameHistory.insert(INSERT, "\n".join(current))
+			gameHistory.see(END)
+			gameHistory.configure(state=DISABLED)
+		def namesValidator():
+			validated = True
 			for player in database["players"]:
-				if player["name"] == None:
-					unknowns += 1
-			for x in range(len(database["players"])):
-				if database["players"][x]["name"] == None:
-					user = await bot.fetch_profile(database["players"][x]["id"])
-					database["players"][x]["name"] = user.display_name
-					tracked += 1
-					incPlayers()
-			bar(0)
-			unknowns = 0
-			tracked = 0
-			checkNames = False
-			writeFile("database.json", database)
-			try: namesValidator() # this seems to be the only crashpoint, so blocking it off just in case
-			except: pass
-		else:
-			sleep(1)
-	insertText("Connection to Epic crashed, please restart the program.") # simple way to tell if the while loop crashed
+				if not player["name"]:
+					validated = False
+					break
+			if validated:
+				customClear("Names have been updated.")
+				if currentView == "last": displayLast()
+				if saveFeed.get():
+					feedSaver()
+			else: insertText("Name retrieval failed, check connection and try again.", clearing=True)
+		insertText("Connected to Epic as {}".format(self.user.display_name), clearing=True)
+		while checkNames != None: # better event implementations COULD be made, oh well, works cleanly as is
+			if checkNames:
+				insertText("Updating names...")
+				for player in database["players"]:
+					if player["name"] == None:
+						unknowns += 1
+				for x in range(len(database["players"])):
+					if database["players"][x]["name"] == None:
+						user = await self.fetch_profile(database["players"][x]["id"])
+						database["players"][x]["name"] = user.display_name
+						tracked += 1
+						incPlayers()
+				bar(0)
+				unknowns = 0
+				tracked = 0
+				checkNames = False
+				writeFile("database.json", database)
+				try: namesValidator() # this seems to be the only crashpoint, so blocking it off just in case
+				except: pass
+			else:
+				sleep(1)
+		insertText("Connection to Epic crashed, please restart the program.") # simple way to tell if the while loop crashed
 
 # Operation functionss
 # setup/reset for database and config file
@@ -219,9 +199,8 @@ def initDatabase():
 	original = deepcopy(config)
 	current = config.keys()
 	if "email" not in current: config["email"] = "YourEpicEmail@email.com"
-	if "password" not in current: config["password"] = "YourEpicPassword"
 	if "snipeCounts" not in current: config["snipeCounts"] = 2
-	if "settings" not in current: config["settings"] = {"xPos":0, "yPos":0, "saveFeed":saveFeed.get()}
+	if "settings" not in current: config["settings"] = {"xPos" : 0, "yPos" : 0, "saveFeed":saveFeed.get()}
 	if "friends" not in current: config["friends"] = []
 	if config != original: writeFile("config.json", config)
 
@@ -244,6 +223,7 @@ def writeFile(target, data):
 # also it slows down overall performance so might as well cap it
 # should I fix this? ye, probably, but my current solution is just to shift out your data to another file, dont play a 1000 matches per week, its unhealthy
 def databaseOverload():
+	global database
 	if os.path.getsize("database.json") >= 50 * 1000000: # 50 mb currently
 		nextName = "database0.json"
 		n = 0
@@ -330,9 +310,7 @@ def swapColour():
 
 # multi-threading the replay reader within, fun and clean implementation
 def consoleThreader(filePath):
-	t1 = Thread(target=conReader, args=[filePath])
-	t1.daemon = True
-	t1.start()
+	Thread(target=conReader, args=[filePath], daemon=True).start()
 
 def conReader(filePath):
 	CREATE_NO_WINDOW = 0x08000000
@@ -351,9 +329,7 @@ def addReplay():
 	if ".replay" in replayName.split("/")[-1]:
 		if not loadWatcher:
 			progress.configure(mode="indeterminate")
-			t1 = Thread(target=loading)
-			t1.daemon = True
-			t1.start()
+			Thread(target=loading, daemon=True).start()
 			loadWatcher = True
 		consoleThreader(replayName)
 
@@ -410,14 +386,13 @@ def rollCredits(): # credits widget
 	Contact me on discord for help Gun-Grave#8284.
 	Thanks to Shiqan for the fortnitereplayreader API.
 	Thanks to Terbau for the fortnitepy API.
-	Thanks to ThisNils for exchange code generator.
 	""", bg="black", fg="white")
 	creditors.bind("<Button-1>", lambda e: webbrowser.open_new("https://streamlabs.com/guardianseeker/tip"))
 	creditors.pack(expand=TRUE, padx=(0, 50))
 	popup.grab_set()
 	popup.mainloop()
 
-def lookupPlayer(): # popup widget
+def lookupPlayer(): # popup widget that asks who you're trying to search for
 	def findName(target):
 		popup.grab_release()
 		popup.destroy()
@@ -974,6 +949,44 @@ def displaySnipers():
 				b.bind("<Key>", lambda e: "break")
 				b.grid(row=i + 1, column=j)
 
+# Initial variable setup
+try:
+	with open("database.json", encoding="utf-8") as f: database = json.load(f)
+	f.close()
+except:
+	if (os.path.exists("database.json")):
+		curTime = str(datetime.now())
+		curTime = curTime.replace(":", ".")
+		os.rename("database.json", "databasebackup-{}.json".format(curTime))
+	with open("database.json", 'w', encoding="utf-8") as f:
+		f.write("{}")
+	f.close()
+	with open("database.json", encoding="utf-8") as f: database = json.load(f)
+	f.close()
+try:
+	with open("config.json", encoding="utf-8") as f: config = json.load(f)
+	f.close()
+except:
+	resetConfig = '{ "email": "YourEpicEmail@email.com","snipeCounts": 2,"settings": {"xPos": 0,"yPos": 0,"saveFeed": false} }'
+	with open("config.json", 'w', encoding="utf-8") as f:
+		f.write(resetConfig)
+	f.close()
+	with open("config.json", encoding="utf-8") as f: config = json.load(f)
+	f.close()
+
+# Initial variables setup
+email = config["email"]
+password = "notrequired"
+filename = "device_auths.json"
+version = "1.8"
+fileDelay = perf_counter()
+currentView = None
+expandableCanvas = 269
+LAST_WIDTH = 510
+FEED_WIDTH = 642
+PLAY_WIDTH = 510
+SNIP_WIDTH = 510
+
 # Initial UI setup
 root = Tk()
 root.title("Sniper Hunter by Guardian Seeker")
@@ -1037,6 +1050,7 @@ gameHistory.pack()
 progress = Progressbar(root, orient = HORIZONTAL, length = LAST_WIDTH + 21, mode = 'determinate')
 progress.pack()
 
+# Update check process, simple url parse
 try:
 	url = "https://pastebin.com/raw/VaYndV2S"
 	r = requests.get(url)
@@ -1050,20 +1064,23 @@ databaseOverload() # checks to make sure the database isn't too large before pro
 
 def connectionFailed():
 	sleep(7)
+	#connectionThread.exit()
 	current = gameHistory.get(1.0, END).split("\n")
 	current.pop()
 	if current[-1] == "Connecting to Epic servers...":
 		insertText("Failed to connect to EPIC servers. Check connection.", clearing=True)
 	return
 
+def connectionThread():
+	loop = asyncio.new_event_loop()
+	asyncio.set_event_loop(loop)
+	client = MyClient()
+	client.run()
+
 try:
 	insertText("Connecting to Epic servers...")
-	connection = Thread(target=lambda:bot.run())
-	connection.daemon = True
-	connection.start()
-	conKiller = Thread(target=lambda:connectionFailed())
-	conKiller.daemon = True
-	conKiller.start()
+	Thread(target=lambda:connectionThread(), daemon=True).start()
+	Thread(target=lambda:connectionFailed(), daemon=True).start()
 except:
 	insertText("Failed to connect to EPIC servers. Check connection.", clearing=True)
 
@@ -1074,3 +1091,68 @@ playerObserver.start()
 root.protocol("WM_DELETE_WINDOW", closeProgram)
 root.config(menu=menubar)
 root.mainloop()
+
+
+"""
+JSON Structures
+
+This is generated by the replay parser program
+playerList {
+	"owner" : "{owner id}",
+	"team" : {NUMBER},
+	"file" : "{replay name}",
+	"session" : "{id of the game session}",
+	"time" : "{starting time of that game}",
+	"totalPlayers" : {# for total real players in that lobby},
+	"players" : [
+		[
+			{team number},
+			{bool if they're a teammate},
+			{player id},
+			{platform, pc, switch, etc.}
+		],
+		[
+			repeating....
+		]
+	],
+	"killfeed" : [
+		[
+			"{killer}",
+			"{killed}",
+			"{weapon}",
+			"{is a bot}",
+			"{time of death}",
+			"{weapon killed ID, this is for diagnostic purposes}"
+		],
+		[
+			repeating....
+		]
+	]
+}
+
+this is generated here
+database {
+	"replays" : [
+		"{name of a replay that's been read, A}",
+		"{name of another replay, B}"
+	],
+	"sessions" : [
+		"{game id of that matching replay, A}" : "{date and time of replay}",
+		"{game id for B}" : "{date and time for that replay}"
+	],
+	"players" : [
+		{
+			"id" : "{player id}",
+			"name" : "{epic ign for the player, if it was retrieved, otherwise null}",
+			"platform" : "{pc, switch, etc.}",
+			"games": [
+				"{game session id A that they were with you in}",
+				"{game session id B}"
+			]
+		},
+		{
+			repeating...
+		}
+	]
+}
+"""
