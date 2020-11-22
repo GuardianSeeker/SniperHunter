@@ -18,7 +18,7 @@ https://github.com/GuardianSeeker/SniperHunter/releases
 Check the README.txt for instructions on how to setup the program.
 You can also watch this tutorial to understand the setup process.
 
-https://youtu.be/v3Ft7q0lLJQ (outdated, if you're reading this right now, I'm working on this video)
+https://www.youtube.com/watch?v=tK9KHHAkSVw
 
 # Donation
 If you like the program that I've made, you can send a tip at the following link (THE PROGRAM ITSELF IS FREE, if you paid for it, refund and call the scammer out).
