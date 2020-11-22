@@ -384,7 +384,7 @@ def rollCredits(): # credits widget
 	https://streamlabs.com/guardianseeker/tip
 
 	Contact me on discord for help Gun-Grave#8284.
-	Thanks to Shiqan for the fortnitereplayreader API.
+	Thanks to Shiqan for the FortniteReplayDecompressor API.
 	Thanks to Terbau for the fortnitepy API.
 	""", bg="black", fg="white")
 	creditors.bind("<Button-1>", lambda e: webbrowser.open_new("https://streamlabs.com/guardianseeker/tip"))
@@ -1011,7 +1011,6 @@ mainmenu.add_command(label="Add Replay", command=addReplay)
 mainmenu.add_command(label="Exit", command=closeProgram)
 modemenu = Menu(menubar, tearoff=0) # Modes Menu
 modemenu.add_command(label="Friends List", command=friendsList)
-#modemenu.add_checkbutton(label="Hide Friends in Kill Feed", onvalue=1, offvalue=0, variable=hideFriends)
 modemenu.add_checkbutton(label="Kill Feed Logger", onvalue=1, offvalue=0, variable=saveFeed)
 helpmenu = Menu(menubar, tearoff=0) # Help Menu
 helpmenu.add_command(label="Reset Data", command=resetDatabase)
@@ -1052,10 +1051,10 @@ progress.pack()
 
 # Update check process, simple url parse
 try:
-	url = "https://pastebin.com/raw/VaYndV2S"
+	url = "https://raw.githubusercontent.com/GuardianSeeker/SniperHunter/master/version"
 	r = requests.get(url)
 	gameHistory.configure(state=NORMAL)
-	if r.text != version: gameHistory.insert(0.0, "Please update the program from the discord!")
+	if r.text != version: gameHistory.insert(0.0, "Please update the program from the GitHub!")
 	else: gameHistory.insert(0.0, "Your version is up-to-date!")
 	gameHistory.configure(state=DISABLED)
 except: pass
@@ -1064,7 +1063,6 @@ databaseOverload() # checks to make sure the database isn't too large before pro
 
 def connectionFailed():
 	sleep(7)
-	#connectionThread.exit()
 	current = gameHistory.get(1.0, END).split("\n")
 	current.pop()
 	if current[-1] == "Connecting to Epic servers...":
@@ -1130,7 +1128,7 @@ playerList {
 	]
 }
 
-this is generated here
+this is generated in here
 database {
 	"replays" : [
 		"{name of a replay that's been read, A}",
