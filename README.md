@@ -36,3 +36,10 @@ https://github.com/Terbau/fortnitepy
 
 # Support
 You can join my [discord](https://discord.gg/vw6Rh6J) also if you need help or find bugs to report.
+
+# Disclaimer
+This program doesn't tamper with your Fortnite gameplay in anyway, I'm not assocaited with Epic Games, I made this software for educational purposes and to catch stream snipers.
+
+All this program does, is open your replay file (AFTER you've finished a game), read the replay and extracts the relevant information. This information is then parsed and organized by my program and displayed in a user-friendly format.
+
+It's like going into your replay through Fortnite, writing down everyones name yourself, and then figuring out who's name has occured more than once; except much faster, and additional features.
