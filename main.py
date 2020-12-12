@@ -314,7 +314,7 @@ def consoleThreader(filePath):
 
 def conReader(filePath):
 	CREATE_NO_WINDOW = 0x08000000
-	subprocess.call("ConsoleReader.exe " + filePath, shell=False, creationflags=CREATE_NO_WINDOW)
+	subprocess.call("ReplayParser.exe " + filePath, shell=False, creationflags=CREATE_NO_WINDOW)
 
 def nameThreader():
 	global checkNames
@@ -832,12 +832,17 @@ def displayFeed():
 		b.grid(row=0, column=x)
 	for i in range(len(playerBase["killfeed"])): # rows
 		for j in range(9): # columns
+			# check if the player exists in the database, if they do, good, if not, they're a bot or haven't had their name pulled yet
 			killer = getPlayer(playerBase["killfeed"][i][0])
 			killed = getPlayer(playerBase["killfeed"][i][1])
 			if playerBase["killfeed"][i][0] == playerBase["owner"]: killer = {"id": playerBase["owner"], "name":"YOU", "platform":"YOU"}
-			elif killer == None: killer = {"id":"bot", "name":"bot", "platform":"bot"}
+			elif killer == None:
+				if playerBase["killfeed"][i][0] == "NPC": killer = {"id":"bot", "name":"NPC", "platform":"bot"}
+				else: killer = {"id":"bot", "name":"bot", "platform":"bot"}
 			if playerBase["killfeed"][i][1] == playerBase["owner"]: killed = {"id": playerBase["owner"], "name":"YOU", "platform":"YOU"}
-			elif killed == None: killed = {"id":"bot", "name":"bot", "platform":"bot"}
+			elif killed == None:
+				if playerBase["killfeed"][i][1] == "NPC": killed = {"id":"bot", "name":"NPC", "platform":"bot"}
+				else: killed = {"id":"bot", "name":"bot", "platform":"bot"}
 			if hideFriends.get() and (killer["id"] in config["friends"] or killer["name"] in config["friends"]):
 				break
 			b = Entry(matrix, text="", bg="black", fg="white", cursor="arrow")
@@ -978,7 +983,7 @@ except:
 email = config["email"]
 password = "notrequired"
 filename = "device_auths.json"
-version = "1.8"
+version = "1.9"
 fileDelay = perf_counter()
 currentView = None
 expandableCanvas = 269
@@ -1118,7 +1123,7 @@ playerList {
 			"{killer}",
 			"{killed}",
 			"{weapon}",
-			"{is a bot}",
+			"{is a knock}",
 			"{time of death}",
 			"{weapon killed ID, this is for diagnostic purposes}"
 		],
