@@ -18,7 +18,7 @@ https://github.com/GuardianSeeker/SniperHunter/releases
 Check the README.txt for instructions on how to setup the program.
 You can also watch this tutorial to understand the setup process.
 
-https://youtu.be/v3Ft7q0lLJQ
+https://www.youtube.com/watch?v=tK9KHHAkSVw
 
 # Donation
 If you like the program that I've made, you can send a tip at the following link (THE PROGRAM ITSELF IS FREE, if you paid for it, refund and call the scammer out).
@@ -33,3 +33,13 @@ https://github.com/Shiqan/FortniteReplayDecompressor
 Terbau for creating fortnitepy which I use to retrieve usernames from Epic servers
 
 https://github.com/Terbau/fortnitepy
+
+# Support
+You can join my [discord](https://discord.gg/vw6Rh6J) also if you need help or find bugs to report.
+
+# Disclaimer
+This program doesn't tamper with your Fortnite gameplay in anyway, I'm not assocaited with Epic Games, I made this software for educational purposes and to catch stream snipers.
+
+All this program does, is open your replay file (AFTER you've finished a game), read the replay and extracts the relevant information. This information is then parsed and organized by my program and displayed in a user-friendly format.
+
+It's like going into your replay through Fortnite, writing down everyones name yourself, and then figuring out who's name has occured more than once; except much faster, and additional features.
