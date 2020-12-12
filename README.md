@@ -1,7 +1,7 @@
 ![alt text](https://i.imgur.com/MeG7RwG.png)
 
 # About
-Fixed up the project and releasing the code, the only code that I've lost since I last worked on this project in June-ish (currently November) is the code for the FortniteReplayDecompressor program. All that did was parse the replay and output a file called playerList.json and you can check out their API at https://github.com/Shiqan/FortniteReplayDecompressor and find the json structure at the bottom of main.py.
+This is a tool intended for famous Fortnite streamers who get stream sniped during their games and want to have some sort of preventative measure to make tracking and reporting easier against their stream snipers. This project couldn't have been done without the use of the Fortnite replay reading API developed by Shiqan (can be found here https://github.com/Shiqan/FortniteReplayDecompressor) .
 
 There's no auto update in this program, don't plan on forcing that in either, if I make an update, the program alerts you on boot that there's a new release and you can come back here to download it.
 
