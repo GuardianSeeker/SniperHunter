@@ -4,10 +4,8 @@ using System.IO;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 
-namespace ReplayParser
-{
-    class Program
-    {
+namespace ReplayParser {
+	class Program {
 		private static string gunTag(byte gunByte) {
 			string cause = "null";
 			switch ((int)gunByte) {
@@ -30,8 +28,6 @@ namespace ReplayParser
 					cause = "SMG";
 					break;
 				case 6:
-					cause = "Sniper";
-					break;
 				case 7:
 					cause = "Sniper";
 					break;
@@ -39,14 +35,8 @@ namespace ReplayParser
 					cause = "Pickaxe";
 					break;
 				case 10:
-					cause = "Explosive";
-					break;
 				case 11:
-					cause = "Explosive";
-					break;
 				case 12:
-					cause = "Explosive";
-					break;
 				case 13:
 					cause = "Explosive";
 					break;
@@ -65,6 +55,10 @@ namespace ReplayParser
 				case 23:
 					cause = "Vehicle";
 					break;
+				case 27:
+				case 28:
+					cause = "Plane";
+					break;
 				case 30:
 					cause = "Stink";
 					break;
@@ -74,9 +68,9 @@ namespace ReplayParser
 				case 50:
 					cause = "Disconnect";
 					break;
-            }
+			}
 			return cause;
-        }
+		}
 		// Credits to SlxTnT for this
 		private static string updateDeathTag(System.Collections.Generic.IEnumerable<string> DeathTags) {
 			string ItemType = "null";
@@ -105,8 +99,6 @@ namespace ReplayParser
 						ItemType = "RocketLauncher";
 						break;
 					case "weapon.ranged.pistol":
-						ItemType = "Pistol";
-						break;
 					case "Weapon.Ranged.Pistol.Standard":
 						ItemType = "Pistol";
 						break;
@@ -147,8 +139,6 @@ namespace ReplayParser
 						ItemType = "Storm";
 						break;
 					case "DeathCause.LoggedOut":
-						ItemType = "Disconnect";
-						break;
 					case "DeathCause.RemovedFromGame":
 						ItemType = "Disconnect";
 						break;
@@ -156,8 +146,6 @@ namespace ReplayParser
 						ItemType = "SentryTurret";
 						break;
 					case "Gameplay.Damage.Environment":
-						ItemType = "Environment";
-						break;
 					case "EnvItem.ReactiveProp.GasPump":
 						ItemType = "Environment";
 						break;
@@ -172,17 +160,12 @@ namespace ReplayParser
 			return ItemType;
 		}
 		private static bool stringContains(string[] stringArray, string key) {
-			foreach (string value in stringArray) {
-				if (value == key) {
-					return true;
-                }
-            }
+			foreach (string value in stringArray) if (value == key) return true;
 			return false;
-        }
-        static void Main(string[] args)
-        {
-            var replayFile = args[0];
-            var reader = new ReplayReader(null, ParseMode.Full);
+		}
+		static void Main(string[] args) {
+			var replayFile = args[0];
+			var reader = new ReplayReader(null, ParseMode.Full);
 			var replay = reader.ReadReplay(replayFile);
 			string owner = "", session = replay.GameData.GameSessionId, file = args[0].Split("/")[args[0].Split("/").Length - 1], timeStart = replay.Info.Timestamp.ToString();
 			string[] reals = new string[100];
@@ -200,7 +183,7 @@ namespace ReplayParser
 					x++;
 				}
 				if (player.TeamIndex > 2 && player.PlayerId != null) totalPlayers += 1;
-            }
+			}
 			foreach (var player in replay.PlayerData) {
 				JArray tempPlayer = new JArray();
 				if (player.EpicId != null && player.EpicId != "" && player.TeamIndex > 2 && player.EpicId.ToLower() != owner) {
@@ -210,7 +193,7 @@ namespace ReplayParser
 					tempPlayer.Add(player.Platform);
 					players.Add(tempPlayer);
 				}
-            }
+			}
 			string killer, killed, death, deathDiagnostic, tod;
 			bool knocked;
 			x = 0;
@@ -227,11 +210,7 @@ namespace ReplayParser
 				deathDiagnostic = kill.GunType.ToString();
 				tod = kill.Time;
 				knocked = kill.Knocked;
-				if (replay.KillFeed[x].DeathTags != null) {
-					foreach (var cause in replay.KillFeed[x].DeathTags) {
-						deathDiagnostic += "\n" + cause;
-					}
-				}
+				if (x < replay.KillFeed.Count && replay.KillFeed[x].DeathTags != null) foreach (var cause in replay.KillFeed[x].DeathTags) deathDiagnostic += "\n" + cause;
 				x++;
 				tempKill.Add(killer);
 				tempKill.Add(killed);
@@ -250,11 +229,9 @@ namespace ReplayParser
 			playerList["players"] = players;
 			playerList["killfeed"] = killfeed;
 			using (StreamWriter path = File.CreateText(@"playerList.json"))
-			using (JsonTextWriter writer = new JsonTextWriter(path)) {
-				playerList.WriteTo(writer);
-			}
+			using (JsonTextWriter writer = new JsonTextWriter(path)) playerList.WriteTo(writer);
 		}
-    }
+	}
 }
 
 /*
