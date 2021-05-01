@@ -89,7 +89,7 @@ if __name__ == "__main__":
 	replayFileHandler = PatternMatchingEventHandler("*.replay", ignore_patterns, ignore_directories, case_sensitive)
 	replayFileHandler.on_created = replayCreated
 	replayFileHandler.on_modified = replayModified
-	playerFileHandler = PatternMatchingEventHandler("*/playerList.json", ignore_patterns, ignore_directories, case_sensitive)
+	playerFileHandler = PatternMatchingEventHandler("./*playerList.json", ignore_patterns, ignore_directories, case_sensitive)
 	playerFileHandler.on_modified = playerModified
 	path = os.getenv('LOCALAPPDATA') + "/FortniteGame/Saved/Demos/"
 	replayObserver = Observer()
@@ -617,7 +617,6 @@ def feedSaver():
 			if player[2] == id:
 				return player[0]
 	try:
-		os.chdir("..")
 		dayMade = datetime.utcfromtimestamp(os.path.getctime("Kill Feed.csv")).strftime("%d")
 		if dayMade != datetime.now().strftime("%d"):
 			f = open("Kill Feed.csv", "w", encoding="utf-8")
@@ -626,7 +625,6 @@ def feedSaver():
 		f = open("Kill Feed.csv", "w", encoding="utf-8")
 		f.close()
 	f = open("Kill Feed.csv", "a", encoding="utf-8")
-	os.chdir("CODE")
 	playerBase = loadFile("playerList.json")
 	lines = f"{playerBase['file']},{playerBase['session']},{playerBase['time']}\n"
 	lines += "Time,Team #,Killer,Action,Team #,Killed,Weapon,Killer ID,Killed ID\n"
@@ -983,7 +981,7 @@ except:
 email = config["email"]
 password = "notrequired"
 filename = "device_auths.json"
-version = "1.9"
+version = "2.0"
 fileDelay = perf_counter()
 currentView = None
 expandableCanvas = 269
