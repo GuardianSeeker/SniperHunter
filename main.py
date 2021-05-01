@@ -1057,7 +1057,7 @@ try:
 	url = "https://raw.githubusercontent.com/GuardianSeeker/SniperHunter/master/version"
 	r = requests.get(url)
 	gameHistory.configure(state=NORMAL)
-	if r.text != version: gameHistory.insert(0.0, "Please update the program from the GitHub!")
+	if r.text.strip() != version: gameHistory.insert(0.0, "Please update the program from the GitHub!")
 	else: gameHistory.insert(0.0, "Your version is up-to-date!")
 	gameHistory.configure(state=DISABLED)
 except: pass
