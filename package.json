@@ -1,0 +1,69 @@
+{
+  "name": "sniper-hunter",
+  "version": "2.1.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "test": "electron ."
+  },
+  "keywords": [],
+  "author": "Guardian Seeker",
+  "license": "ISC",
+  "description": "A tool for tracking games in Fortnite and catching stream snipers.",
+  "dependencies": {
+    "chokidar": "^3.5.1",
+    "electron-squirrel-startup": "^1.0.0",
+    "fnbr": "^1.4.1"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^6.0.0-beta.55",
+    "@electron-forge/maker-deb": "^6.0.0-beta.55",
+    "@electron-forge/maker-rpm": "^6.0.0-beta.55",
+    "@electron-forge/maker-squirrel": "^6.0.0-beta.55",
+    "@electron-forge/maker-zip": "^6.0.0-beta.55",
+    "electron": "^12.0.8"
+  },
+  "config": {
+    "forge": {
+      "packagerConfig": {
+        "asar": true,
+        "ignore": [
+          "ReplayParser.exe",
+          "deviceAuth.json",
+          "/Auth",
+          "database.json",
+          "playerList.json",
+          "sniper_hunter.nuspec",
+          "package-lock.json",
+          "killfeed.csv",
+          "config.json"
+        ],
+        "icon": "icon.ico"
+      },
+      "makers": [
+        {
+          "name": "@electron-forge/maker-squirrel",
+          "config": {
+            "name": "sniper_hunter"
+          }
+        },
+        {
+          "name": "@electron-forge/maker-zip",
+          "platforms": [
+            "darwin"
+          ]
+        },
+        {
+          "name": "@electron-forge/maker-deb",
+          "config": {}
+        },
+        {
+          "name": "@electron-forge/maker-rpm",
+          "config": {}
+        }
+      ]
+    }
+  }
+}

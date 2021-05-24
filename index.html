@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<title>Sniper Hunter by Guardian Seeker</title>
+	<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+	<link rel="stylesheet" href="stylesheet.css">
+	<link rel="stylesheet" type="text/css" href="datatables.min.css" />
+	<script>if (typeof module === 'object') {window.module = module; module = undefined;};</script>
+	<script src="jquery.min.js"></script>
+	<script>if (window.module) module = window.module;</script>
+</head>
+
+<body>
+	<div id="menu" class="noselect">
+		<span onclick="addReplay()" title="Add Replay" style="
+			position: absolute;
+			font-size: 16px;
+			left: 30px;
+			top: 24px;
+			border: 2px solid #24272b8a;
+			border-radius: 50%;
+			width: 24px;
+			height: 24px;
+			text-indent: -1px;
+			cursor: pointer;">➕</span>
+		<ul>
+			<li onclick="getStats()">Game Stats</li>
+			<li onclick="getFeed()">Kill Feed</li>
+			<li onclick="getPlacements()">Placements</li>
+			<li onclick="getSnipers()">Sniper List</li>
+		</ul>
+	</div>
+	<div id="tables">
+
+	</div>
+	<div id="progress"></div>
+	<div id="console" class="noselect">
+		<span class="blinks noselect" style="position: fixed; left: 6px;">></span>
+		<ul id="logspace" style="margin-top: 2px; list-style: none; text-indent: -18px;">
+		</ul>
+	</div>
+	<script type="text/javascript" src="javascript.js"></script>
+	<script type="text/javascript" src="datatables.min.js" ></script>
+</body>
+
+</html>
