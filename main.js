@@ -32,7 +32,7 @@ logFeed = config["logFeed"];
 		request({
 			uri: "https://raw.githubusercontent.com/GuardianSeeker/SniperHunter/master/version",
 			}, function(error, response, body) {
-				if (body.trim() < version) logMessage(`You have the latest version! (${version})`);
+				if (body.trim() <= version) logMessage(`You have the latest version! (${version})`);
 				else logMessage(`Please update to the newest version from https://github.com/GuardianSeeker/SniperHunter !`);
 				logMessage("Connecting to EPIC servers...");
 		});
