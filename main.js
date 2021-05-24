@@ -388,7 +388,7 @@ async function parseReplay() {
 	}
 	else logMessage(`Parsing information for '${playerList["file"]}'...`);
 	database["sessions"][session] = {
-		"file": playerList["file"], // MAKE SURE THIS DOESN'T READ THE FULL FILE PATH ----------------------------------------------------------------------------------------
+		"file": playerList["file"],
 		"time": playerList["time"]
 	};
 	for (var x = 0; x < playerList["players"].length; x++) {
@@ -464,7 +464,7 @@ playerList {
 		repeating...
 }
 
-this is generated in here
+This is generated in here
 database {
 	"sessions" : {
 		"{game id}" : {
