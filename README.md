@@ -1,4 +1,4 @@
-![alt text](https://i.imgur.com/eoKkjJG.png)
+![alt text](https://i.imgur.com/MeG7RwG.png)
 
 # About
 This is a tool intended for famous Fortnite streamers who get stream sniped during their games and want to have some sort of preventative measure to make tracking and reporting easier against their stream snipers. This project couldn't have been done without the use of the Fortnite replay reading API developed by Shiqan (can be found here https://github.com/Shiqan/FortniteReplayDecompressor) .
@@ -18,7 +18,7 @@ https://github.com/GuardianSeeker/SniperHunter/releases
 Check the README.txt for instructions on how to setup the program.
 You can also watch this tutorial to understand the setup process.
 
-https://www.youtube.com/watch?v=Tq3lYNVXYAw
+https://www.youtube.com/watch?v=tK9KHHAkSVw
 
 # Donation
 If you like the program that I've made, you can send a tip at the following link (THE PROGRAM ITSELF IS FREE, if you paid for it, refund and call the scammer out).
@@ -32,14 +32,10 @@ https://github.com/Shiqan/FortniteReplayDecompressor
 
 Terbau for creating fortnitepy which I use to retrieve usernames from Epic servers
 
-https://github.com/fnbrjs/fnbr.js
-
-xMistt for creating DeviceAuthGenerator which creates the login tokens for fnbr.js
-
-https://github.com/xMistt/DeviceAuthGenerator
+https://github.com/Terbau/fortnitepy
 
 # Support
-You can join my [discord](https://discord.gg/vw6Rh6J) if you need help or find bugs to report.
+You can join my [discord](https://discord.gg/vw6Rh6J) also if you need help or find bugs to report.
 
 # Disclaimer
 This program doesn't tamper with your Fortnite gameplay in anyway, I'm not assocaited with Epic Games, I made this software for educational purposes and to catch stream snipers.
