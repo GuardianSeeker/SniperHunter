@@ -1,48 +1,28 @@
 using FortniteReplayReader;
-using Unreal.Core.Models.Enums;
-using System.IO;
-using Newtonsoft.Json.Linq;
+using FortniteReplayReader.Models;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
+using System.Linq;
+using System.Collections.Generic;
+using System.IO;
+using Unreal.Core.Models.Enums;
 
-namespace ReplayParser {
-	class Program {
-		private static string gunTag(byte gunByte) {
-			string cause = "N/A";
-			switch ((int)gunByte) {
-				case 0:
-					cause = "Storm";
-					break;
-				case 1:
-					cause = "Fall";
-					break;
-				case 8:
-					cause = "Pickaxe";
-					break;
-				case 16:
-					cause = "Trap";
-					break;
-				case 17:
-					cause = "Bleedout";
-					break;
-				case 23:
-					cause = "Vehicle";
-					break;
-				case 27:
-				case 28:
-					cause = "Plane";
-					break;
-				case 50:
-					cause = "Disconnect";
-					break;
-			}
-			return cause;
-		}
+namespace ReplayParser
+{
+	class Program
+	{
+		private static bool StringContains(List<string> list, string target) {
+			if (list == null || target == null) return false;
+			foreach (string l in list) if (l == target) return true;
+			return false;
+        }
 		// Credits to SlxTnT for this
 		private static string UpdateDeathTag(System.Collections.Generic.IEnumerable<string> DeathTags) {
 			string ItemType = "N/A";
 
 			if (DeathTags == null) {
-				return ItemType = "NULL";
+				return ItemType = "N/A";
 			}
 
 			foreach (string deathTag in DeathTags) {
@@ -75,6 +55,9 @@ namespace ReplayParser {
 					case "Item.Weapon.Ranged.SMG.PDW":
 					case "Item.Weapon.Ranged.SMG.Suppressed":
 						ItemType = "SMG";
+						break;
+					case "Item.Weapon.Ranged.Sniper.ReactorGrade":
+						ItemType = "Railgun";
 						break;
 					case "weapon.ranged.sniper.bolt":
 					case "phoebe.items.SuppressedSniper":
@@ -159,6 +142,9 @@ namespace ReplayParser {
 					case "Item.Weapon.Vehicle.Meatball":
 						ItemType = "Boat";
 						break;
+					case "Ability.Passive.SurfaceChange":
+						ItemType = "Lava";
+						break;
 					case "phoebe.weapon.ranged.smg": // Super general weapon cases after in case nothing above catches
 						ItemType = "SMG";
 						break;
@@ -176,95 +162,100 @@ namespace ReplayParser {
 			}
 			return ItemType;
 		}
-		private static bool StringContains(string[] stringArray, string key) {
-			foreach (string value in stringArray) if (value == key) return true;
-			return false;
-		}
-		static void Main(string[] args) {
+		private static string TimeofDeath(float DeltaTimeGameSeconds) {
+			return TimeSpan.FromSeconds((int)DeltaTimeGameSeconds).ToString(@"mm\:ss");
+        }
+		static void Main(string[] args)
+		{
+			var reader = new ReplayReader();
 			var file = args[0];
-			var reader = new ReplayReader(null, ParseMode.Full);
-			var replay = reader.ReadReplay(file);
-			string owner = "", session = replay.GameData.GameSessionId, timeStart = replay.Info.Timestamp.ToString();
-			string[] reals = new string[200];
-			int team = 0, totalPlayers = 0, x = 0;
+			var replay = reader.ReadReplay(file, ParseType.Full);
 			file = file.Split("/")[file.Split("/").Length - 1];
 			file = file.Split("\\")[file.Split("\\").Length - 1];
+			int real = 0, totalPlayers = 0, team = -1;
+			string owner = "", session = replay.GameInformation.GameState.SessionId, timeStart = replay.Info.Timestamp.ToString();
 			JObject playerList = new JObject();
+			JArray players = new JArray();
+			JArray killFeed = new JArray();
 			JObject stats = new JObject();
 			JArray placements = new JArray();
-			JArray players = new JArray();
-			JArray killfeed = new JArray();
-
-			/* Real Player Count */
-			foreach (var player in replay.PlayerData) {
-				if (player.EpicId != null && player.EpicId != "") {
-					if (owner == "" && player.IsReplayOwner) {
-						owner = player.EpicId.ToLower();
-						team = (int)player.TeamIndex - 2;
-					}
-					reals[x] = player.EpicId;
-					x++;
+			
+			/* Real Player & Player List Processing */
+			foreach (var player in replay.GameInformation.Players) {
+				if (player.Teamindex > 2) totalPlayers++;
+				if (player.IsPlayersReplay) {
+					owner = player.EpicId.ToLower();
+					team = player.Teamindex - 2;
 				}
-				if (player.TeamIndex > 2 && player.PlayerId != null) totalPlayers += 1;
-			}
-
-			/* Player List Processing */
-			foreach (var player in replay.PlayerData) {
-				JArray tempPlayer = new JArray();
-				if (player.EpicId != null && player.EpicId != "" && player.TeamIndex > 2 && player.EpicId.ToLower() != owner) {
-					tempPlayer.Add((player.TeamIndex - 2).ToString());
-					tempPlayer.Add(player.EpicId.ToLower());
-					tempPlayer.Add(player.Platform);
-					players.Add(tempPlayer);
+				else if (!player.IsBot && player.EpicId != null) {
+					JArray t = new JArray();
+					t.Add(player.Teamindex - 2);
+					t.Add(player.EpicId.ToLower());
+					t.Add(player.Platform);
+					players.Add(t);
+					real++;
 				}
 			}
-
+			
 			/* Kill Feed Processing */
-			string killer, killed, death, tod;
-			bool knocked;
-			x = 0;
-			foreach (var kill in replay.Eliminations) {
-				JArray tempKill = new JArray();
-				if (kill.Eliminator != "Bot" && StringContains(reals, kill.Eliminator)) killer = kill.Eliminator.ToLower();
-				else if (kill.Eliminator == "Bot") killer = "NPC";
-				else killer = "bot";
-				if (kill.Eliminated != "Bot" && StringContains(reals, kill.Eliminated)) killed = kill.Eliminated.ToLower();
-				else if (kill.Eliminated == "Bot") killed = "NPC";
-				else killed = "bot";
-				while (x < replay.KillFeed.Count && replay.KillFeed[x].DeathTags == null && (replay.KillFeed[x].FinisherOrDownerName == killer || replay.KillFeed[x].PlayerName == killed)) x++;
-				death = gunTag(kill.GunType) == "N/A" ? UpdateDeathTag(replay.KillFeed[x].DeathTags) : gunTag(kill.GunType);
-				tod = kill.Time;
-				knocked = kill.Knocked;
-				tempKill.Add(killer);
-				tempKill.Add(killed);
-				tempKill.Add(death);
-				tempKill.Add(knocked);
-				tempKill.Add(tod);
-				tempKill.Add(replay.KillFeed[x].DeathTags);
-				killfeed.Add(tempKill);
+			string killer, killed;
+			foreach (var kill in replay.GameInformation.KillFeed) {			
+				if (kill.FinisherOrDowner != null && kill.Player != null && (kill.CurrentPlayerState == PlayerState.Killed || kill.CurrentPlayerState == PlayerState.Knocked || kill.CurrentPlayerState == PlayerState.BleedOut || kill.CurrentPlayerState == PlayerState.FinallyEliminated)) {
+					JArray t = new JArray();
+					if (kill.FinisherOrDowner.Teamindex <= 2) killer = "NPC";
+					else killer =  kill.FinisherOrDowner.IsBot ? "BOT" : kill.FinisherOrDowner.EpicId == null ? "bad id" : kill.FinisherOrDowner.EpicId.ToLower();
+					if (kill.Player.Teamindex <= 2) killed = "NPC";
+					else killed = kill.Player.IsBot ? "BOT" : kill.Player.EpicId.ToLower();
+					t.Add(killer);
+					t.Add(killed);
+					t.Add(UpdateDeathTag(kill.DeathTags));
+					t.Add(kill.CurrentPlayerState == PlayerState.Knocked);
+					t.Add(TimeofDeath(kill.DeltaGameTimeSeconds));
+					t.Add(kill.DeathTags);
+					if (!(killer == "NPC" && killed == "NPC")) killFeed.Add(t);
+				}	
 			}
-
-			/* Stats Processing */
-			stats["kills"] = replay.Stats.Eliminations;
-			stats["assists"] = replay.Stats.Assists;
-			stats["accuracy"] = replay.Stats.Accuracy * 100;
-			stats["dealt"] = replay.Stats.DamageToPlayers;
-			stats["taken"] = replay.Stats.DamageTaken;
-			stats["distance"] = replay.Stats.TotalTraveled;
-
-			/* Placements Processing */
-			foreach (var ranks in replay.TeamData) {
-				if (ranks.TeamIndex > 2) {
-					JObject tempTeam = new JObject();
-					tempTeam["team"] = ranks.TeamIndex - 2;
-					tempTeam["placement"] = ranks.Placement == null ? 0 : ranks.Placement;
-					tempTeam["members"] = (string.Join(",", ranks.PlayerNames)).ToLower();
-					tempTeam["kills"] = ranks.TeamKills == null ? 0 : ranks.TeamKills;
-					placements.Add(tempTeam);
-				}
+			
+            /* Stats Processing */
+			try {
+				stats["kills"] = replay.Stats.Eliminations;
+				stats["assists"] = replay.Stats.Assists;
+				stats["accuracy"] = replay.Stats.Accuracy * 100;
+				stats["dealt"] = replay.Stats.DamageToPlayers;
+				stats["taken"] = replay.Stats.DamageTaken;
+				stats["distance"] = replay.Stats.TotalTraveled;
+			} catch (System.NullReferenceException) { // fails in creative modes at times? no idea why
+				stats["kills"] = "N/A";
+				stats["assists"] = "N/A";
+				stats["accuracy"] = "N/A";
+				stats["dealt"] = "N/A";
+				stats["taken"] = "N/A";
+				stats["distance"] = "N/A";
             }
 
-			/* Final JSON compilation */
+			/* Placements Processing */
+			List<string> pList = new List<string>();
+			foreach (var p in replay.GameInformation.Players) {
+				if (p.Teamindex > 2 && !StringContains(pList, p.Teamindex.ToString())) {
+					pList.Add(p.Teamindex.ToString());
+					JObject t = new JObject();
+					t["team"] = p.Teamindex - 2;
+					t["placement"] = p.Placement;
+					t["members"] = p.IsBot ? "BOT" : p.EpicId.ToLower();
+					t["kills"] = p.TeamKills;
+					placements.Add(t);
+                }
+				else if (p.Teamindex > 2) { // adding a team member
+					foreach (var t in placements) {
+						if (t["team"].ToString() == (p.Teamindex - 2).ToString()) {
+							t["members"] += "," + (p.IsBot ? "BOT" : p.EpicId.ToLower());
+							if ((int)t["placement"] > p.Placement) t["placement"] = p.Placement; // best player of that team takes rank, otherwise this doesn't look right in things like squad fills where someone leaves early and teammates have different placements
+							break;
+                        }
+                    }
+                }
+            }
+			 
 			playerList["owner"] = owner;
 			playerList["team"] = team;
 			playerList["file"] = file;
@@ -272,46 +263,13 @@ namespace ReplayParser {
 			playerList["time"] = timeStart;
 			playerList["totalPlayers"] = totalPlayers;
 			playerList["players"] = players;
-			playerList["killfeed"] = killfeed;
+			playerList["killfeed"] = killFeed;
 			playerList["stats"] = stats;
 			playerList["placements"] = placements;
+
 			using (StreamWriter path = File.CreateText(@"playerList.json"))
 			using (JsonTextWriter writer = new JsonTextWriter(path)) playerList.WriteTo(writer);
 		}
 	}
 }
-
-/*
-playerList {
-	"owner" : "{owner id}",
-	"team" : {NUMBER},
-	"file" : "{replay name}",
-	"session" : "{id of the game session}",
-	"time" : "{starting time of that game}", 12/9/2020 12:17:51 AM
-	"totalPlayers" : {# for total real players in that lobby},
-	"players" : [
-		[
-			{team number},
-			{bool if they're a teammate},
-			{player id},
-			{platform, pc, switch, etc.}
-		],
-		[
-			repeating....
-		]
-	],
-	"killfeed" : [
-		[
-			"{killer}",
-			"{killed}",
-			"{weapon}",
-			"{is a knock}",
-			"{time of death}",
-			"{weapon killed ID, this is for diagnostic purposes}"
-		],
-		[
-			repeating....
-		]
-	]
-}
-*/
+	
