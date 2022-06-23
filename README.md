@@ -1,3 +1,5 @@
+# THIS PROGRAM IS CURRENTLY BROKEN, I AM WORKING ON AN UPDATE/REWORK - June 23, 2022
+
 ![alt text](https://i.imgur.com/eoKkjJG.png)
 
 # About
