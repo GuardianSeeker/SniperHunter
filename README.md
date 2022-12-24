@@ -16,7 +16,9 @@ https://github.com/GuardianSeeker/SniperHunter/releases/latest/
 # Install Tutorial
 
 Download the latest version of the program.
+
 Extract to a folder anywhere.
+
 Run **Sniper Hunter.exe** (a shortcut on your desktop/etc would be useful)
 
 # Donation
