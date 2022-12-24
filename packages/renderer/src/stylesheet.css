@@ -1,0 +1,401 @@
+:root {
+  --bg-alternate: #2B2E3B;
+  --bg-color: #18191A;
+  --fast-trans: 0.2s;
+  --light-white: #F5F6F7;
+  --red-red: #8D021F;
+  --slow-trans: 0.5s;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--light-white);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 1.3em;
+  height: 100vh;
+  margin: 0px;
+  overflow: hidden;
+  width: 100vw;
+}
+
+nav {
+  border-radius: 0px !important;
+  height: 48px;
+}
+
+a {
+  color: var(--red-red);
+}
+
+h2 {
+  border-bottom: 1px solid var(--red-red);
+  margin: 6px 0px 12px 0px;
+  text-align: center;
+}
+
+.active {
+  background-color: var(--red-red) !important;
+}
+
+button {
+  background-color: var(--bg-alternate);
+  border: none;
+  color: var(--light-white);
+  cursor: pointer;
+  font-size: 0.7em;
+  height: 100%;
+  width: 25%;
+}
+
+nav button {
+  transition-duration: var(--fast-trans);
+  transition-property: background-color;
+  transition-timing-function: linear;
+  border-right: 1px solid var(--red-red);
+  width: calc(100% / 4);
+}
+
+nav button:hover {
+  background-color: var(--bg-color);
+}
+
+nav button:first-child {
+  border-left: 1px solid var(--red-red);
+}
+
+#content {
+  height: calc(100vh - (50px + 39px));
+  overflow: auto;
+  padding: 4px;
+  position: relative;
+}
+
+.frame {
+  border-radius: 12px;
+  border: 1px solid var(--red-red);
+  box-shadow: inset 0px 0px 1px var(--light-white);
+}
+
+.noselect,
+i,
+nav button {
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#titleBar {
+  -webkit-app-region: drag;
+  font-family: cursive;
+  text-align: right;
+  background-color: var(--bg-alternate);
+}
+
+.titleButton {
+  -webkit-app-region: no-drag;
+  padding: 0px 16px;
+  border-left: 1px solid var(--red-red);
+}
+
+.titleButton:hover {
+  color: var(--red-red);
+}
+
+progress {
+  appearance: none;
+}
+
+::-webkit-progress-bar {
+  background-color: var(--bg-color);
+}
+
+::-webkit-progress-value {
+  background-color: var(--red-red);
+}
+
+::-webkit-scrollbar {
+  background-color: transparent;
+  width: 16px;
+}
+
+::-webkit-scrollbar-thumb {
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, .3);
+  background-color: var(--red-red);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+  background-color: var(--bg-alternate);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-corner {
+  background-color: transparent;
+}
+
+#loading {
+  background-color: var(--bg-color);
+  bottom: 0px;
+  font-size: 2em;
+  left: 0px;
+  line-height: calc(100vh - 29px);
+  position: fixed;
+  right: 0px;
+  text-align: center;
+  top: 30px;
+  z-index: 999;
+}
+
+.lds-dual-ring {
+  display: inline-block;
+  position: fixed;
+  top: calc(50% - 130px);
+  left: calc(50% - 100px);
+}
+
+.lds-dual-ring:after {
+	content: "";
+	display: block;
+	width: 140px;
+	height: 140px;
+	border-radius: 50%;
+	border: 30px solid var(--red-red);
+	border-color: var(--red-red) transparent var(--red-red) transparent;
+	animation: lds-dual-ring var(--slow-trans) linear infinite;
+}
+
+.lds-dual-ring img {
+	float: left;
+	width: 200px;
+}
+
+@keyframes lds-dual-ring {
+	0% {
+		transform: rotate(0deg);
+	}
+
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+
+hr {
+  border: 1px solid var(--red-red);
+}
+
+#gamePanels {
+  display: flex;
+  height: calc(100vh - 91px);
+}
+
+#gamePanels>div {
+  width: -webkit-fill-available;
+  height: 100%;
+  padding: 2px;
+  overflow: auto;
+}
+
+.killcard {
+  background-color: var(--bg-alternate);
+  height: 88px;
+  margin-bottom: 4px;
+  text-align: center;
+  overflow: hidden;
+  padding: 1px;
+}
+
+.attack {
+  position: relative;
+  line-height: 30px;
+  z-index: 1;
+}
+
+.elimTime {
+  position: relative;
+  text-align: center;
+  font-size: 50px;
+  opacity: 0.15;
+  text-shadow: 0 0 6px var(--bg-alternate);
+  margin-top: -10px;
+  z-index: 1;
+}
+
+
+.killer {
+  float: left;
+  text-align: left;
+  margin-right: -100%;
+}
+
+.killed {
+  float: right;
+  text-align: right;
+  margin-left: -100%;
+}
+
+.playerThumb {
+  position: relative;
+  z-index: 2;
+  cursor: pointer;
+  transition: filter linear var(--fast-trans);
+}
+
+.playerThumb img {
+  border: 2px solid var(--red-red);
+  border-radius: 50%;
+  margin-bottom: -8px;
+}
+
+.playerThumb:hover {
+  filter: saturate(0.2);
+}
+
+.standardTable {
+  width: 100%;
+  font-size: 75%;
+}
+
+.standardTable th {
+  position: sticky;
+  top: 0;
+  background-color: var(--bg-alternate);
+  padding: 4px;
+  border: 1px solid var(--light-white);
+  transform: translateY(-2px);
+  z-index: 3;
+}
+
+.standardTable tr:nth-child(even) {
+  background-color: var(--bg-alternate);
+}
+
+.standardTable td {
+  padding: 4px;
+  border: 1px solid var(--red-red);
+}
+
+#sniperHistory {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0px, 1fr));
+  gap: 4px;
+}
+
+.playerCard {
+  overflow: hidden;
+  font-size: 75%;
+  padding: 4px;
+  background-color: var(--bg-alternate);
+}
+
+.playerCard img {
+  float: left;
+  border-radius: 50%;
+  padding-right: 4px;
+  cursor: pointer;
+  border: 6px solid #00000000;
+  transition-property: background-color, border;
+  transition-timing-function: linear;
+  transition-duration: var(--fast-trans);
+}
+
+.playerCard img:hover {
+  border: 6px solid var(--red-red);
+}
+
+.playerCard:hover > img {
+  background-color: var(--bg-color);
+}
+
+.copyable {
+  cursor: pointer;
+  color: var(--red-red);
+}
+
+.copyable:hover {
+  color: var(--light-white);
+}
+
+input {
+  width: 99%;
+  height: 32px;
+  appearance: none;
+  outline: none;
+  margin: 0 0 4px 0;
+  padding: 0;
+  text-align: center;
+  background-color: var(--bg-alternate);
+  color: var(--light-white);
+}
+
+.tooltip {
+  position: fixed;
+  padding: 4px;
+  background-color: var(--bg-alternate);
+  opacity: 0.8;
+  z-index: 10;
+}
+
+@keyframes fadeOut {
+  from {opacity: 1;}
+  to {opacity: 0;}
+}
+
+.fade {
+  animation-name: fadeOut;
+  animation-duration: 1.5s;
+  animation-fill-mode: forwards;
+  animation-timing-function: cubic-bezier(0.75, 0, 1, 0);
+}
+
+#playerProfile {
+  position: fixed;
+  top: 29px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  background-color: var(--bg-color);
+  border-top: 1px solid var(--red-red);
+  padding-top: 8px;
+  z-index: 5;
+  display: grid;
+  grid-template-areas:
+    "X X"
+    "X X"
+    "X X"
+    "X X";
+  grid-auto-rows: 50px;
+  overflow: auto;
+}
+
+#closeProfile {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 48px;
+  height: 30px;
+  text-align: center;
+  line-height: 30px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#closeProfile:hover {
+  color: var(--red-red);
+}
+
+#statsLink {
+  cursor: pointer;
+  padding: 8px;
+  background-color: var(--bg-alternate);
+  transition: background-color linear var(--fast-trans);
+}
+
+#statsLink:hover {
+  background-color: var(--bg-color);
+}

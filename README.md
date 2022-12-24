@@ -1,26 +1,23 @@
-# THIS PROGRAM IS CURRENTLY BROKEN, I AM WORKING ON AN UPDATE/REWORK - June 23, 2022
-
-![alt text](https://i.imgur.com/eoKkjJG.png)
+![alt text](https://i.imgur.com/2zYM1Dl.gif)
 
 # About
-This is a tool intended for famous Fortnite streamers who get stream sniped during their games and want to have some sort of preventative measure to make tracking and reporting easier against their stream snipers. This project couldn't have been done without the use of the Fortnite replay reading API developed by Shiqan (can be found here https://github.com/Shiqan/FortniteReplayDecompressor) .
+This is a tool intended for famous Fortnite streamers who get stream sniped during their games and want to have some sort of preventative measure to make tracking and reporting easier against their stream snipers.
 
-There's no auto update in this program, don't plan on forcing that in either, if I make an update, the program alerts you on boot that there's a new release and you can come back here to download it.
+There's no auto update in this program, don't plan on forcing that in either, you can check for an update through the About page in the program or check here occasionally.
 
-**Yes, this is the same program that SypherPK was using to catch Stream Snipers, I know it got him to ban at least 1 person, so, I'm happy with it overall.**
+**Yes, this is the same program that SypherPK was using to catch Stream Snipers in it's earliest stages and was able to leverage it successfully.**
 
 # Download
 
-Download the progrm from the releases page, you only need to get **SniperHunter.zip**, instructions will be inside a file called README.txt
+Download the progrm from the releases page, you only need to get **SniperHunter.zip**, extract it to a folder anywhere and run **Sniper Hunter.exe**.
 
-https://github.com/GuardianSeeker/SniperHunter/releases
+https://github.com/GuardianSeeker/SniperHunter/releases/latest/
 
 # Install Tutorial
 
-Check the README.txt for instructions on how to setup the program.
-You can also watch this tutorial to understand the setup process.
-
-https://www.youtube.com/watch?v=Tq3lYNVXYAw
+Download the latest version of the program.
+Extract to a folder anywhere.
+Run **Sniper Hunter.exe** (a shortcut on your desktop/etc would be useful)
 
 # Donation
 If you like the program that I've made, you can send a tip at the following link (THE PROGRAM ITSELF IS FREE, if you paid for it, refund and call the scammer out).
@@ -28,17 +25,17 @@ If you like the program that I've made, you can send a tip at the following link
 https://streamlabs.com/guardianseeker/tip
 
 # Shoutouts
-Shiqan who created the FortniteReplayDecompressor program which lets me analyze Fortnite replays
+xNocken for the Fortnite Replay Parser
 
-https://github.com/Shiqan/FortniteReplayDecompressor
+https://github.com/xNocken/replay-reader
 
-Terbau for creating fortnitepy which I use to retrieve usernames from Epic servers
+Fortnite API for the downloading of skin icons
 
-https://github.com/fnbrjs/fnbr.js
+https://fortnite-api.com/
 
-xMistt for creating DeviceAuthGenerator which creates the login tokens for fnbr.js
+Alex Kozack for the vite boilerplate
 
-https://github.com/xMistt/DeviceAuthGenerator
+https://github.com/cawa-93/vite-electron-builder
 
 # Support
 You can join my [discord](https://discord.gg/vw6Rh6J) if you need help or find bugs to report.
@@ -46,6 +43,4 @@ You can join my [discord](https://discord.gg/vw6Rh6J) if you need help or find b
 # Disclaimer
 This program doesn't tamper with your Fortnite gameplay in anyway, I'm not assocaited with Epic Games, I made this software for educational purposes and to catch stream snipers.
 
-All this program does, is open your replay file (AFTER you've finished a game), read the replay and extracts the relevant information. This information is then parsed and organized by my program and displayed in a user-friendly format.
-
-It's like going into your replay through Fortnite, writing down everyones name yourself, and then figuring out who's name has occured more than once; except much faster, and additional features.
+All this program does, is read your replay file (AFTER you've finished a game), read the replay data and extracts the relevant information. This information is then parsed and organized by my program and displayed in a user-friendly format.

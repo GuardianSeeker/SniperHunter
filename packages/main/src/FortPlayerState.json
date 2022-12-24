@@ -1,0 +1,51 @@
+{
+	"path": [
+		"/Script/FortniteGame.FortPlayerStateAthena"
+	],
+	"parseLevel": 1,
+	"exportGroup": "gameData",
+	"exportName": "players",
+	"exportType": "array",
+	"properties": {
+		"TeamIndex": {
+			"name": "TeamIndex",
+			"parseFunction": "readByte",
+			"parseType": "default"
+		},
+		"Platform": {
+			"name": "Platform",
+			"parseFunction": "readString",
+			"parseType": "default"
+		},
+		"PlayerNamePrivate": {
+			"name": "PlayerNamePrivate",
+			"parseFunction": "readString",
+			"parseType": "default"
+		},
+		"UniqueId": {
+			"name": "UniqueId",
+			"parseFunction": "readNetId",
+			"parseType": "default"
+		},
+		"BotUniqueId": {
+			"name": "BotUniqueId",
+			"parseFunction": "readNetId",
+			"parseType": "default"
+		},
+		"bIsABot": {
+			"name": "bIsABot",
+			"parseFunction": "readBit",
+			"parseType": "default"
+		},
+		"KillScore": {
+			"name": "KillScore",
+			"parseFunction": "readInt32",
+			"parseType": "default"
+		},
+		"Place": {
+			"name": "Place",
+			"parseFunction": "readInt32",
+			"parseType": "default"
+		}
+	}
+}
