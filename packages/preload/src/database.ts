@@ -140,14 +140,15 @@ class Database {
     for (let x = 0; x < players.length; x++) {
       const p = players[x];
       const existingPlayer = await this.getPlayer(p.playerID);
+      const platform = p.platform == null ? 'NULL' : `'${p.platform}'`;
+      let skin = p.skin == null ? 'NULL' : `'${p.skin}'`;
       if (existingPlayer.playerID.length > 0) {
-        const platform = p.platform == null ? 'NULL' : `'${p.platform}'`;
-        const skin = p.skin == null ? 'NULL' : `'${p.skin}'`;
+        if (existingPlayer.skin != null && skin == 'NULL') {
+          skin = existingPlayer.skin;
+        }
         serializeql.push(`UPDATE Players SET snipes = snipes + 1, platform = ${platform}, username = '${escape(p.username)}', skin = ${skin} WHERE playerID = '${p.playerID}'`);
       }
       else {
-        const platform = p.platform == null ? 'NULL' : `'${p.platform}'`;
-        const skin = p.skin == null ? 'NULL' : `'${p.skin}'`;
         playerSql.push(`('${p.playerID}', '${escape(p.username)}', ${p.isBot}, ${platform}, ${skin}, ${p.snipes})`);
       }
     }

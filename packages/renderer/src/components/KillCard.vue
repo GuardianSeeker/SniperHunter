@@ -24,14 +24,14 @@ const validKilled = ref(props.killed ?? botPlayer);
 
 <template>
   <div
-    class="killcard frame"
-    :style="{'background-image': `linear-gradient(to right, ${getTeamColor(killerPlayer ? killerPlayer.team : 0)} 0%, transparent 45%, transparent 55%, ${getTeamColor(killedPlayer ? killedPlayer.team : 0)} 100%)`}"
+    class="killcard"
   >
     <div
       class="killer playerThumb"
       @click="emit('search', validKiller.username)"
     >
       <img
+        :style="{ 'border': `4px solid ${getTeamColor(killerPlayer ? killerPlayer.team : 0)}` }"
         :src="`../../assets/skins/${getSkin(validKiller)}.png`"
       />
       <br />
@@ -42,6 +42,7 @@ const validKilled = ref(props.killed ?? botPlayer);
       @click="emit('search', validKilled.username)"
     >
       <img
+        :style="{ 'border': `4px solid ${getTeamColor(killedPlayer ? killedPlayer.team : 0)}` }"
         :src="`../../assets/skins/${getSkin(validKilled)}.png`"
       />
       <br />

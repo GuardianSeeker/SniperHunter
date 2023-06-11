@@ -12,7 +12,9 @@ let creativeMode = props.stats.mode.toLowerCase().includes('creative');
 
 <template>
   <table>
-    <tr style="text-align: center;"><td :colspan="2">Stats</td></tr>
+    <tr style="text-align: center;">
+      <td style="border-bottom: 1px solid var(--red-red);" :colspan="2">Stats</td>
+    </tr>
     <tr>
       <td>Session ID</td>
       <td>{{ stats.gameID }}</td>
@@ -76,11 +78,11 @@ table {
   font-size: 75%;
   padding-right: 2px;
   margin-bottom: -6px;
+  border: 1px solid var(--red-red);
 }
 
 td {
   padding: 4px;
-  border: 1px solid var(--red-red);
 }
 
 tr td:nth-child(even) {

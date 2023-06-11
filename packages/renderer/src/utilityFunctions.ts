@@ -21,7 +21,7 @@ function convertDuration(duration:number) {
 }
 
 function convertKillTime(time:number) {
-  return `${Math.floor(time / 1000 / 60)}:${Math.round(time / 1000 % 60).toString().padStart(2, '0')}`;
+  return `${Math.floor(time / 1000 / 60)}:${(Math.round(time / 1000) % 60).toString().padStart(2, '0')}`;
 }
 
 function copyField(event:MouseEvent, information: string, data:string) {
