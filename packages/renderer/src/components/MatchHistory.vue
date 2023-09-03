@@ -54,7 +54,12 @@ async function deleteGame(gameID:string) {
 
 async function chooseReplays() {
   loading.value = true;
-  const res = await addReplay();
+  let res = null;
+  try {
+    res = await addReplay();
+  } catch {
+    alert("ERROR PARSING REPLAY");
+  }
   loading.value = false;
   if (res != null) {
     store.setTarget(res);

@@ -22,6 +22,11 @@
 			"parseFunction": "readString",
 			"parseType": "default"
 		},
+		"UniqueID": {
+			"name": "UniqueID",
+			"parseFunction": "readNetId",
+			"parseType": "default"
+		},
 		"UniqueId": {
 			"name": "UniqueId",
 			"parseFunction": "readNetId",

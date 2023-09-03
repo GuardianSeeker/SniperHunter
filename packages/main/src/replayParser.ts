@@ -13,9 +13,9 @@ const sharp = require('sharp');
 function parsePlayers(players) {
   const result: Player[] = [];
   players.forEach((p) => {
-    if (result.filter(r => [p.BotUniqueId, p.UniqueId].includes(r.playerID)).length == 0) {
+    if (result.filter(r => [p.BotUniqueId, p.UniqueId, p.UniqueID].includes(r.playerID)).length == 0) {
       result.push(new Player({
-        playerID: p.BotUniqueId ?? p.UniqueId,
+        playerID: p.BotUniqueId ?? p.UniqueId ?? p.UniqueID,
         username: p.PlayerNamePrivate,
         isBot: p.bIsABot != null && p.bIsABot ? true : false,
         platform: p.Platform,
@@ -56,7 +56,8 @@ function parseStats(data, cleanedPlayers, gameID:string, replayName:string, mode
   const inCreative = mode.toLowerCase().includes('creative');
   const botCount = inCreative ? 0 : cleanedPlayers.filter(p => p.TeamIndex > 2 && p.bIsABot != null).length;
   const playerCount = cleanedPlayers.filter(p => p.TeamIndex > 2 && p.bIsABot == null).length;
-  const ownerID = cleanedPlayers.filter(p => p.Owner != null)[0].UniqueId;
+  const ownerPlayer = cleanedPlayers.find(p => p.Owner != null);
+  const ownerID = ownerPlayer.UniqueId ?? ownerPlayer.UniqueID;
   const gameDuration = Math.max(athenaStats.startTime, data.events.at(-1).startTime);
   return new GameStat({
     gameID: gameID,
@@ -67,7 +68,7 @@ function parseStats(data, cleanedPlayers, gameID:string, replayName:string, mode
     bots: botCount,
     players: playerCount,
     duration: gameDuration,
-    placement: inCreative ? 0 : cleanedPlayers.filter(p => p.UniqueId == ownerID)[0].Place ?? 0,
+    placement: inCreative ? 0 : cleanedPlayers.find(p => p.UniqueId == ownerID || p.UniqueID == ownerID).Place ?? 0,
     kills: inCreative ? 0 : athenaStats.eliminations,
     assists: inCreative ? 0 : athenaStats.assists,
     accuracy: inCreative ? 0 : athenaStats.accuracy,
@@ -81,7 +82,7 @@ function parseGamers(dataPlayers, players:Player[], gameID:string, mode:string) 
   const gamers:GamePlayer[] = [];
   const inCreative = mode.toLowerCase().includes('creative');
   players.forEach((p) => {
-    const dataPlayer = dataPlayers.filter(dp => dp.UniqueId == p.playerID || dp.BotUniqueId == p.playerID)[0];
+    const dataPlayer = dataPlayers.find(dp => dp.UniqueId == p.playerID || dp.BotUniqueId == p.playerID || dp.UniqueID == p.playerID);
     let teamPlacement = inCreative ? 0 : Math.min(...dataPlayers
       .filter(dp => dp.TeamIndex == dataPlayer.TeamIndex && dp.Place != null)
       .map(dp => dp.Place));
@@ -163,7 +164,7 @@ export async function addReplay(path:string) {
     return true;
   }
   const mode:string = data.gameData.playlistInfo;
-  const cleanedPlayers = data.gameData.players.filter(p => p.BotUniqueId != null || p.UniqueId != null);
+  const cleanedPlayers = data.gameData.players.filter(p => p.BotUniqueId != null || p.UniqueId != null || p.UniqueID != null);
 	const players = parsePlayers(cleanedPlayers);
 	const kills = parseEliminations(data.events, gameID);
 	const stat = parseStats(data, cleanedPlayers, gameID, replayName, mode);
