@@ -163,7 +163,7 @@ export async function addReplay(path:string) {
   if ((await db.getGameStats(gameID)).gameID.length > 0) {
     return true;
   }
-  const mode:string = data.gameData.playlistInfo;
+  const mode:string = data.gameData.playlistInfo ?? 'CREATIVE_UNREAL';
   const cleanedPlayers = data.gameData.players.filter(p => p.BotUniqueId != null || p.UniqueId != null || p.UniqueID != null);
 	const players = parsePlayers(cleanedPlayers);
 	const kills = parseEliminations(data.events, gameID);
