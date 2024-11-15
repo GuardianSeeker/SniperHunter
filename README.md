@@ -21,15 +21,19 @@ Extract to a folder anywhere.
 
 Run **Sniper Hunter.exe** (a shortcut on your desktop/etc would be useful)
 
+# Update Tutorial
+
+When updating the program, just copy your database.db file in the old Sniper Hunter folder out, and place it in the folder of the newest version of the program.
+
 # Donation
 If you like the program that I've made, you can send a tip at the following link (THE PROGRAM ITSELF IS FREE, if you paid for it, refund and call the scammer out).
 
 https://streamlabs.com/guardianseeker/tip
 
 # Shoutouts
-xNocken for the Fortnite Replay Parser
+Shiqan for the Fortnite Replay Parser
 
-https://github.com/xNocken/replay-reader
+https://github.com/Shiqan/FortniteReplayDecompressor
 
 Fortnite API for the downloading of skin icons
 
@@ -38,6 +42,10 @@ https://fortnite-api.com/
 Alex Kozack for the vite boilerplate
 
 https://github.com/cawa-93/vite-electron-builder
+
+xNocken for the Fortnite Replay Parser (removed as of v3.4)
+
+https://github.com/xNocken/replay-reader
 
 # Support
 You can join my [discord](https://discord.gg/vw6Rh6J) if you need help or find bugs to report.

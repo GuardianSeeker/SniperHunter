@@ -93,8 +93,8 @@ const updateText = ref('Check for Update');
       for the skin icon images, and
       <a
         href="#"
-        @click="openUrl('https://github.com/xNocken/replay-reader')"
-      >xNocken</a>
+        @click="openUrl('https://github.com/Shiqan/FortniteReplayDecompressor')"
+      >Shiqan</a>
       for the fortnite replay parser and
       <a
         href="#"

@@ -15,7 +15,7 @@ function openUrl(url:string) {
 
 async function checkUpdate() {
   const updateURL = 'https://raw.githubusercontent.com/GuardianSeeker/SniperHunter/master/version';
-  const version = 3.3;
+  const version = 3.4;
   const res = await nodeFetch(updateURL);
   const latestVersion = parseFloat(await res.text());
   return latestVersion > version;
