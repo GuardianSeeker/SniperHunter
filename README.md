@@ -21,6 +21,10 @@ Extract to a folder anywhere.
 
 Run **Sniper Hunter.exe** (a shortcut on your desktop/etc would be useful)
 
+As of version 3.4, you will need to have .NET 8.0 Desktop Runtime installed in order to get the replay parser to work.
+
+https://dotnet.microsoft.com/en-us/download/dotnet/8.0 (for almost all users all you need is the x64 link under the .NET Desktop Runtime 8.0 section)
+
 # Update Tutorial
 
 When updating the program, just copy your database.db file in the old Sniper Hunter folder out, and place it in the folder of the newest version of the program.
