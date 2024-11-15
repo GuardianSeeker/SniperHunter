@@ -32,8 +32,8 @@ class GameStat {
     damageTaken: 0,
     distanceTravelled: 0,
   }) {
-    this.gameID = data.gameID;
-    this.owner = data.owner;
+    this.gameID = data.gameID.toLowerCase();
+    this.owner = data.owner.toLowerCase();
     this.timestamp = data.timestamp;
     this.replayName = data.replayName;
     this.mode = data.mode;

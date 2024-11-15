@@ -14,7 +14,7 @@ class Player {
     skin: 'epic',
     snipes: 0,
   }) {
-    this.playerID = data.playerID;
+    this.playerID = data.playerID.toLowerCase();
     this.username = data.username;
     this.isBot = data.isBot;
     this.platform = data.platform;

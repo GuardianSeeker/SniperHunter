@@ -6,8 +6,9 @@ import GameEliminations from './GameEliminations.vue';
 import GameTeams from './GameTeams.vue';
 import GameStats from './GameStats.vue';
 import PlayerCard from './PlayerCard.vue';
+import Collapsable from './Collapsable.vue';
 
-  const props = defineProps<{
+const props = defineProps<{
   gameId?: string
 }>();
 
@@ -34,42 +35,47 @@ const focus = ref(null);
 
 <template>
   <div>
-    <div
-      v-if="validGameID != null"
-      id="gamePanels"
-    >
+    <Collapsable title="Stats" :open="snipers.length <= 3">
       <div style="min-width: fit-content; width: auto;">
         <GameStats
           :stats="stats"
           :players="players"
         />
       </div>
-      <GameEliminations
-        ref="search"
-        :elims="elims"
-        :gamers="gamers"
-        :players="players"
-        @search="(query) => {focus.focusPlayer(query)}"
-      />
-      <GameTeams
-        ref="focus"
-        :elims="elims"
-        :gamers="gamers"
-        :players="players"
-        @search="(query) => {search.search = query}"
-      />
-    </div>
-    <span v-if="snipers.length > 0">
-      <hr />
-      <h2 style="padding-bottom: 12px;">Snipers</h2>
-      <div id="sniperHistory">
-        <PlayerCard
-          v-for="player in snipers"
-          :key="player.playerID"
-          :player="player"
-          :gamer="gamers.filter(g => g.playerID == player.playerID)[0]"
+    </Collapsable>
+    <Collapsable title="Eliminations">
+      <div
+        v-if="validGameID != null"
+        id="gamePanels"
+      >
+        <!-- @vue-ignore -->
+        <GameEliminations
+          ref="search"
+          :elims="elims"
+          :gamers="gamers"
+          :players="players"
+          @search="(query) => {focus.focusPlayer(query)}"
+        />
+        <GameTeams
+          ref="focus"
+          :elims="elims"
+          :gamers="gamers"
+          :players="players"
+          @search="(query) => {search.search = query}"
         />
       </div>
-    </span>
+    </Collapsable>
   </div>
+  <span v-if="snipers.length > 0">
+    <hr />
+    <h2 style="padding-bottom: 12px;">Snipers</h2>
+    <div id="sniperHistory">
+      <PlayerCard
+        v-for="player in snipers"
+        :key="player.playerID"
+        :player="player"
+        :gamer="gamers.filter(g => g.playerID == player.playerID)[0]"
+      />
+    </div>
+  </span>
 </template>

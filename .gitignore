@@ -64,3 +64,4 @@ database.db
 *.rar
 *.bat
 todo.txt
+replayParser/

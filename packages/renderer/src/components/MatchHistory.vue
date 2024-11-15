@@ -3,7 +3,7 @@ import {ref} from 'vue';
 import {store} from '../store';
 import {db, addReplay} from '#preload';
 import {convertTimestamp} from '../utilityFunctions';
-import {GameStat} from '../../../preload/src/models/GameStat';
+import {GameStat} from '../../../preload/src/models/GameStats';
 import LoadingScreen from './LoadingScreen.vue';
 
 function keyStamp(timestamp:Date) {
@@ -58,7 +58,7 @@ async function chooseReplays() {
   try {
     res = await addReplay();
   } catch {
-    alert("ERROR PARSING REPLAY");
+    console.log("ERROR PARSING REPLAY");
   }
   loading.value = false;
   if (res != null) {

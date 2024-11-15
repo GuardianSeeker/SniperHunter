@@ -1,7 +1,7 @@
 import {Database as sqlite} from 'sqlite3';
 import {GameElimination} from './models/GameElimination';
 import {GamePlayer} from './models/GamePlayer';
-import {GameStat} from './models/GameStat';
+import {GameStat} from './models/GameStats';
 import {Player} from './models/Player';
 
 const initStatements = [
@@ -142,7 +142,7 @@ class Database {
       const existingPlayer = await this.getPlayer(p.playerID);
       const platform = p.platform == null ? 'NULL' : `'${p.platform}'`;
       let skin = p.skin == null ? 'NULL' : `'${p.skin}'`;
-      if (existingPlayer.playerID.length > 0) {
+      if (existingPlayer != null) {
         if (existingPlayer.skin != null && skin == 'NULL') {
           skin = existingPlayer.skin;
         }
@@ -214,13 +214,18 @@ class Database {
   };
 
   getPlayer = async (playerID: string): Promise<Player> => {
-    const result = await getSingle(`SELECT * FROM Players WHERE playerID='${playerID}'`);
-    return new Player(result);
+    const result = await getSingle(`SELECT * FROM Players WHERE playerID='${playerID}'`) as Player;
+    return result;
   };
 
-  getPlayerGames = async (playerID: string): Promise<GameStats[]> => {
+  getPlayers = async (): Promise<Player[]> => {
+    const result = await getAll(`SELECT * FROM Players`);
+    return (result) as Player[];
+  }
+
+  getPlayerGames = async (playerID: string): Promise<GameStat[]> => {
     const result = await getAll(`SELECT * FROM GamePlayers WHERE playerID='${playerID}'`);
-    const stats:GameStats[] = [];
+    const stats:GameStat[] = [];
     result.forEach(e => {
       stats.push(new GameStat(e));
     });
@@ -239,6 +244,10 @@ class Database {
       players.push(new Player(e));
     });
     return players;
+  };
+
+  getLastGame = async(): Promise<GameStat | null> => {
+    return await getSingle('SELECT * FROM GameStats ORDER BY Timestamp DESC LIMIT 1') as GameStat;
   };
 
   deleteMatch = async(gameID: string): Promise<boolean> => {

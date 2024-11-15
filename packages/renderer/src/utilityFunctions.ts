@@ -39,7 +39,7 @@ function copyField(event:MouseEvent, information: string, data:string) {
 
 function getSkin(player:Player) {
   if (player == null) { return ''; }
-  return player.isBot == true ? 'epic' : player.skin ?? 'sniper';
+  return player.isBot == true ? 'epic' : player.skin == '' ? 'sniper' : player.skin;
 }
 
 function getTeamColor(team:number) {

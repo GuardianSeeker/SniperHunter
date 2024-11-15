@@ -396,3 +396,26 @@ input {
 #statsLink:hover {
   background-color: var(--bg-color);
 }
+
+.collapsible {
+  cursor: pointer;
+  margin: 0px;
+  padding: 10px 0px;
+  text-transform: uppercase;
+  background-color: var(--bg-alternate);
+  transition-property: background-color;
+  transition-timing-function: linear;
+  transition-duration: var(--fast-trans);
+}
+
+.collapsible:hover {
+  background-color: var(--bg-color);
+}
+
+.collapsed {
+  height: 0;
+  overflow: hidden;
+}
+.uncollapsed {
+  height: auto;
+}

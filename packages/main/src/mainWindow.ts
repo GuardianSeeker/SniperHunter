@@ -35,7 +35,7 @@ async function createWindow() {
     },
     icon: join(app.getAppPath(), 'packages/main/assets/icon.ico'),
     frame: false,
-    minWidth: 1280,
+    minWidth: 1200,
     minHeight: 600,
     x: inFrame ? settings.winX : 0,
     y: inFrame ? settings.winY : 0,

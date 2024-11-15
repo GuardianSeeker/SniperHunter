@@ -17,10 +17,10 @@ class GameElimination {
     weapon: '',
   }) {
     this.id = data.id;
-    this.gameID = data.gameID;
-    this.time = parseInt(data.time.toString());
-    this.killerID = data.killerID;
-    this.killedID = data.killedID;
+    this.gameID = data.gameID.toLowerCase();
+    this.time = data.time;
+    this.killerID = data.killerID.toLowerCase();
+    this.killedID = data.killedID.toLowerCase();
     this.knocked = data.knocked;
     this.weapon = data.weapon;
   }
