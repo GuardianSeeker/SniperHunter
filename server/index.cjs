@@ -100,7 +100,7 @@ const defaultPlatformGroups = [
 ];
 const defaultSettings = { playerIds: [], sniperThreshold: 2, autoSwitchLastMatch: true,
   hideTrayIcon: false, openBrowserOnLaunch: true, downloadMissingSkins: true, backToTopSide: 'left',
-  proxyEnabled: true };
+  proxyEnabled: true, customCursorEnabled: true };
 function writeConfig(value) {
   fs.mkdirSync(dataRoot, { recursive: true });
   const temporary = configPath + '.tmp';
@@ -182,14 +182,14 @@ function normalizeSettings(value) {
   const threshold = Number(value.sniperThreshold);
   if (!Number.isInteger(threshold) || threshold < 1 || threshold > 1000)
     throw new Error('Sniper threshold must be a whole number from 1 to 1000.');
-  for (const key of ['autoSwitchLastMatch', 'hideTrayIcon', 'openBrowserOnLaunch', 'downloadMissingSkins', 'proxyEnabled'])
+  for (const key of ['autoSwitchLastMatch', 'hideTrayIcon', 'openBrowserOnLaunch', 'downloadMissingSkins', 'proxyEnabled', 'customCursorEnabled'])
     if (typeof value[key] !== 'boolean') throw new Error(`${key} must be on or off.`);
   const backToTopSide = value.backToTopSide ?? 'left';
   if (!['left', 'right'].includes(backToTopSide)) throw new Error('Back to top button side must be left or right.');
   return { playerIds: [...new Set(ids.map(id => /^[0-9a-f]{32}$/i.test(id) ? id.toLowerCase() : id))], sniperThreshold: threshold,
     autoSwitchLastMatch: value.autoSwitchLastMatch, hideTrayIcon: value.hideTrayIcon,
     openBrowserOnLaunch: value.openBrowserOnLaunch, downloadMissingSkins: value.downloadMissingSkins, backToTopSide,
-    proxyEnabled: value.proxyEnabled };
+    proxyEnabled: value.proxyEnabled, customCursorEnabled: value.customCursorEnabled };
 }
 function loadSettings() {
   try {
@@ -1145,7 +1145,7 @@ function replayStatus(db) {
       const failed = get('failed');
       if (done >= batch.total && !activity.batchDoneAt) activity.batchDoneAt = Date.now();
       if (done < batch.total || Date.now() - activity.batchDoneAt < 10000)
-        return { kind: 'batch', message: `${done}/${batch.total} replays processed · ${added} replays added${duplicates ? ` · ${duplicates} already added` : ''}${failed ? ` · ${failed} failed to parse` : ''}`,
+        return { kind: 'batch', message: `${done.toLocaleString()}/${batch.total.toLocaleString()} replays processed · ${added.toLocaleString()} replays added${duplicates ? ` · ${duplicates.toLocaleString()} already added` : ''}${failed ? ` · ${failed.toLocaleString()} failed to parse` : ''}`,
           progress: Math.min(100, done * 100 / batch.total), batchID: activity.activeBatchId };
       activity.activeBatchId = null;
     }
@@ -1235,7 +1235,8 @@ function createServer(db, assets, devMode, reloadClients, enqueue, loadMap, skin
       const readOnly = !allowedHosts.has(host) || forwarded || !isPrivateClient(req.socket.remoteAddress);
       if (readOnly && !settings.proxyEnabled) {
         res.writeHead(403, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-        res.end('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sniper Hunter</title></head><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#18191a;color:#fff;font:1rem system-ui,sans-serif">proxy views have been disabled</body></html>');
+        const icon = assets.get('/assets/icon.ico')?.toString('base64') || '';
+        res.end(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sniper Hunter by Guardian Seeker</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#18191a;color:#f5f6f7;font:1rem system-ui,sans-serif}.blocked{text-align:center}.emblem{position:relative;width:113px;height:113px;margin:auto;display:grid;place-items:center}.emblem img{width:94px;height:94px}.emblem:before{content:"";position:absolute;inset:10px;border:14px solid transparent;border-left-color:#8d021f;border-right-color:#8d021f;border-radius:50%;animation:spin 1.25s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}p{margin:1.1rem 0 0}</style></head><body><main class="blocked"><div class="emblem"><img src="data:image/x-icon;base64,${icon}" alt="Sniper Hunter"></div><p>Proxy views have been disabled.</p></main></body></html>`);
         return;
       }
       if (!readOnly && !['GET', 'HEAD'].includes(req.method) && req.headers.origin !== `http://${host}`)
@@ -1395,7 +1396,8 @@ function createServer(db, assets, devMode, reloadClients, enqueue, loadMap, skin
       }
       if (pathname === '/api/status' && req.method === 'GET') return json(res, 200,
         { ...replayStatus(db), addedAt: activity.addedAt, addedSource: activity.addedSource || '',
-          autoSwitchLastMatch: settings.autoSwitchLastMatch, backToTopSide: settings.backToTopSide });
+          autoSwitchLastMatch: settings.autoSwitchLastMatch, backToTopSide: settings.backToTopSide,
+          customCursorEnabled: settings.customCursorEnabled });
       if (pathname === '/api/console' && req.method === 'GET') {
         const after = Number(requestUrl.searchParams.get('after')) || 0;
         return json(res, 200, { entries: consoleEntries.filter(entry => entry.id > after) });
@@ -1410,7 +1412,8 @@ function createServer(db, assets, devMode, reloadClients, enqueue, loadMap, skin
       if (pathname === '/api/settings' && req.method === 'GET') {
         const suggestions = db.prepare(`SELECT s.owner AS playerID, COALESCE(NULLIF(p.username, ''), s.owner) AS username,
           COUNT(*) AS games FROM GameStats s LEFT JOIN Players p ON p.playerID = s.owner
-          WHERE s.owner <> '' AND LOWER(s.owner) <> 'null' GROUP BY s.owner ORDER BY games DESC LIMIT 10`).all();
+          WHERE s.owner <> '' AND LOWER(s.owner) <> 'null' GROUP BY s.owner
+          HAVING COUNT(*) >= 2 ORDER BY games DESC`).all();
         const player = db.prepare(`SELECT COALESCE(NULLIF(username, ''), playerID) AS username FROM Players WHERE playerID = ?`);
         const ownerProfiles = settings.playerIds.map(playerID => ({ playerID, username: player.get(playerID)?.username || playerID }));
         return json(res, 200, { settings, localUrl: appUrl, lanUrls: lanUrls(), ownerProfiles, suggestedPlayerIds: suggestions });
@@ -1438,7 +1441,8 @@ function createServer(db, assets, devMode, reloadClients, enqueue, loadMap, skin
       if (pathname === '/api/sql/schema' && req.method === 'GET') {
         const names = db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'
           AND name NOT GLOB 'sqlite_*' AND name NOT GLOB 'PlayerSearch_*'
-          AND name NOT IN ('PlayerSearch', 'PlayerCounts', 'PlayerPlatformCounts', 'PlayerCacheMeta') ORDER BY name`).all();
+          AND name NOT IN ('PlayerSearch', 'PlayerCounts', 'PlayerPlatformCounts', 'PlayerCacheMeta',
+            'ReplayBatches', 'ReplayImports') ORDER BY name`).all();
         const tables = names.map(({ name }) => {
           const quoted = `"${name.replaceAll('"', '""')}"`;
           const columns = db.prepare(`PRAGMA table_info(${quoted})`).all().map(({ name, type, notnull, pk }) => ({ name, type, required: !!notnull, primaryKey: !!pk }));
@@ -1499,19 +1503,25 @@ function createServer(db, assets, devMode, reloadClients, enqueue, loadMap, skin
         return json(res, 200, match ? matchDetails(db, match) : { match: null, platforms: [], eliminations: [], teams: [] });
       }
       if (pathname === '/api/matches/metrics' && req.method === 'GET') {
-        const filters = matchFilters(requestUrl);
+        const filters = matchFilters(requestUrl, '', { skipKind: true });
         if (filters.error) return json(res, 400, { error: filters.error });
         const row = db.prepare(`SELECT COUNT(*) AS games, ROUND(AVG(NULLIF(placement, 0)), 2) AS averagePlacement,
           COALESCE(SUM(players), 0) AS realPlayers, COALESCE(SUM(bots), 0) AS bots,
           COALESCE(SUM(CASE WHEN LOWER(mode) LIKE '%creative%' THEN 1 ELSE 0 END), 0) AS creativeGames,
           COALESCE(SUM(CASE WHEN LOWER(mode) NOT LIKE '%creative%' THEN 1 ELSE 0 END), 0) AS nonCreativeGames,
           COALESCE(SUM(CASE WHEN distanceTravelled > 0 THEN distanceTravelled ELSE 0 END), 0) AS distanceTravelled,
+          COALESCE(SUM(CASE WHEN duration > 0 THEN duration ELSE 0 END), 0) AS timePlayed,
           COALESCE(SUM(CASE WHEN placement = 1 THEN 1 ELSE 0 END), 0) AS gamesWon,
           COALESCE(SUM(CASE WHEN placement > 1 THEN 1 ELSE 0 END), 0) AS losses,
           COALESCE(SUM(CASE WHEN kills > 0 THEN kills ELSE 0 END), 0) AS totalKills
           FROM GameStats ${filters.where}`).get(...filters.args);
+        const timeFilters = matchFilters(requestUrl);
+        const timePlayed = requestUrl.searchParams.has('kind')
+          ? db.prepare(`SELECT COALESCE(SUM(CASE WHEN duration > 0 THEN duration ELSE 0 END), 0) AS timePlayed
+              FROM GameStats ${timeFilters.where}`).get(...timeFilters.args).timePlayed
+          : row.timePlayed;
         const total = row.realPlayers + row.bots;
-        return json(res, 200, { ...row, realPercent: total ? row.realPlayers * 100 / total : 0,
+        return json(res, 200, { ...row, timePlayed, realPercent: total ? row.realPlayers * 100 / total : 0,
           creativePercent: row.games ? row.creativeGames * 100 / row.games : 0,
           nonCreativePercent: row.games ? row.nonCreativeGames * 100 / row.games : 0,
           kd: row.losses ? row.totalKills / row.losses : null,

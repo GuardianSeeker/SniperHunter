@@ -1,13 +1,13 @@
 <nav class="top-nav" aria-label="Main navigation">
-  <a routerLink="/lastmatch" routerLinkActive="active">Last match</a>
-  <a routerLink="/games" routerLinkActive="active">Recent games</a>
-  <a routerLink="/snipers" routerLinkActive="active">Snipers List</a>
+  <a routerLink="/lastmatch" routerLinkActive="active" (pointerenter)="setNavHoverOrigin($event)"><span>Last match</span></a>
+  <a routerLink="/games" routerLinkActive="active" (pointerenter)="setNavHoverOrigin($event)"><span>Recent games</span></a>
+  <a routerLink="/snipers" routerLinkActive="active" (pointerenter)="setNavHoverOrigin($event)"><span>Snipers list</span></a>
   @if (!access.readOnly()) {
-    <a routerLink="/replay" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Add replay</a>
-    <a routerLink="/sql" routerLinkActive="active">Custom SQL</a>
-    <a routerLink="/settings" routerLinkActive="active">Settings</a>
+    <a routerLink="/replay" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (pointerenter)="setNavHoverOrigin($event)"><span>Add replay</span></a>
+    <a routerLink="/sql" routerLinkActive="active" (pointerenter)="setNavHoverOrigin($event)"><span>Custom SQL</span></a>
+    <a routerLink="/settings" routerLinkActive="active" (pointerenter)="setNavHoverOrigin($event)"><span>Settings</span></a>
   }
-  <a routerLink="/about" routerLinkActive="active">About</a>
+  <a routerLink="/about" routerLinkActive="active" (pointerenter)="setNavHoverOrigin($event)"><span>About</span></a>
 </nav>
 <router-outlet />
 @if (showBackToTop()) { <button type="button" class="back-to-top" [class.back-to-top-right]="backToTopSide() === 'right'" (click)="scrollToTop()" aria-label="Back to top" title="Back to top">↑</button> }

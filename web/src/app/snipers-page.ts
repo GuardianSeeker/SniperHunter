@@ -2,27 +2,29 @@ import { Component, HostListener, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { skinFallback, skinUrl } from './skin';
 import { platformIcon } from './platform-icon';
+import { copyWithFeedback } from './copy-feedback';
+import { count, decimal } from './format';
 
 interface PlayerCard { playerID: string; username: string; platform: string; skin: string; isAI: number; games: number }
 interface PlatformMetric { key: string; label: string; players: number; percent: number; variants: { code: string; players: number }[] }
 interface Metrics { total: number; platforms: PlatformMetric[] }
 
 @Component({
-  selector: 'app-players-page',
+  selector: 'app-snipers-page',
   imports: [RouterLink],
   template: `
     <main class="page">
-      <div class="page-heading"><div><h1>Snipers List</h1><p class="muted">People who have appeared in your games.</p></div></div>
+      <div class="page-heading"><div><h1>Snipers list</h1><p class="muted">People who have appeared in your games.</p></div></div>
       @if (metrics(); as stats) {
-        <div class="metrics-row player-metrics"><div class="metric" [class.selected]="!platform()"><button type="button" class="metric-filter" (click)="clearPlatform()" [attr.aria-pressed]="!platform()"><span>Total players</span><strong>{{ stats.total }}</strong></button></div>
+        <div class="metrics-row player-metrics"><div class="metric" [class.selected]="!platform()"><button type="button" class="metric-filter" (click)="clearPlatform()" [attr.aria-pressed]="!platform()"><span>Total players</span><strong>{{ formatCount(stats.total) }}</strong></button></div>
           @for (item of stats.platforms; track item.key) {
             <div class="metric platform-metric" [class.selected]="platform() === item.key">
               <button type="button" class="metric-filter" (click)="filterPlatform(item.key)" [attr.aria-pressed]="platform() === item.key">
-                <span class="platform-metric-label">{{ item.label }} @if (platformIcon(item.key); as icon) { <img class="platform-icon platform-icon-invert" [src]="icon" alt="" /> }</span><strong>{{ item.players }} <small>{{ item.percent.toFixed(1) }}%</small></strong>
+                <span class="platform-metric-label">{{ item.label }} @if (platformIcon(item.key); as icon) { <img class="platform-icon platform-icon-invert" [src]="icon" alt="" /> }</span><strong>{{ formatCount(item.players) }} <small>{{ formatDecimal(item.percent, 1) }}%</small></strong>
               </button>
               @if (item.variants.length > 1) { <div class="variant-list">
                 @for (variant of item.variants; track variant.code) {
-                  <button type="button" [class.selected]="platform() === variant.code" (click)="filterPlatform(variant.code)" [attr.aria-pressed]="platform() === variant.code">{{ variant.code }} {{ variant.players }}</button>
+                  <button type="button" [class.selected]="platform() === variant.code" (click)="filterPlatform(variant.code)" [attr.aria-pressed]="platform() === variant.code">{{ variant.code }} {{ formatCount(variant.players) }}</button>
                 }
               </div> }
             </div>
@@ -39,11 +41,11 @@ interface Metrics { total: number; platforms: PlatformMetric[] }
       @if (error()) { <p class="notice error" role="alert">{{ error() }}</p> }
       <div class="player-wall">
         @for (player of players(); track player.playerID) {
-          <a class="player-card" [routerLink]="['/player', player.playerID]">
+          <a class="player-card" [routerLink]="['/player', player.playerID]" (contextmenu)="copyName(player.username, $event)">
             <img [src]="skinUrl(player.skin, !!player.isAI)" (error)="skinFallback($event, !!player.isAI)" alt="" loading="lazy" />
             <div><strong>{{ player.username }}</strong><small class="identifier">{{ player.playerID }}</small><span class="player-platform-line">{{ player.isAI ? 'AI' : (player.platform && player.platform.toUpperCase() !== 'NULL' ? player.platform : 'Unknown platform') }}
               @if (platformIcon(player.platform, !!player.isAI); as icon) { <img class="platform-icon platform-icon-invert" [src]="icon" alt="" /> } @else { <span class="platform-dot">·</span> }
-              {{ player.games }} {{ player.games === 1 ? 'game' : 'games' }}</span></div>
+              {{ formatCount(player.games) }} {{ player.games === 1 ? 'game' : 'games' }}</span></div>
           </a>
         }
       </div>
@@ -54,6 +56,7 @@ interface Metrics { total: number; platforms: PlatformMetric[] }
   `,
 })
 export class PlayersPage {
+  copyName(name: string, event: MouseEvent): void { void copyWithFeedback(name, event); }
   readonly players = signal<PlayerCard[]>([]);
   readonly metrics = signal<Metrics | null>(null);
   readonly query = signal('');
@@ -67,6 +70,8 @@ export class PlayersPage {
   readonly skinUrl = skinUrl;
   readonly skinFallback = skinFallback;
   readonly platformIcon = platformIcon;
+  readonly formatCount = count;
+  readonly formatDecimal = decimal;
   private cursor: string | null = null;
   private showAIBeforePlatform: boolean | null = null;
   private request = 0;

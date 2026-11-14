@@ -1,4 +1,5 @@
 import { Component, signal } from '@angular/core';
+import { count } from './format';
 
 interface SavedQuery { id: string; name: string; sql: string }
 interface Result { columns: string[]; rows: Record<string, unknown>[]; message: string }
@@ -10,11 +11,11 @@ interface Table { name: string; rows: number; columns: { name: string; type: str
     <main class="page sql-page">
       <h1>Custom SQL</h1>
       <p class="muted">Run a statement against your local Sniper Hunter database. Changes take effect immediately.</p>
-      <details class="schema-browser" (toggle)="openSchema($event)"><summary>Database tables @if (schemaLoaded()) { <span class="muted">({{ tables().length }})</span> }</summary>
-        <p class="muted schema-loading">PlayerCounts and PlayerSearch are internal indexes that keep Snipers List fast. They are rebuilt from Players and GamePlayers after an old database import.</p>
+      <details class="schema-browser collapsible" (toggle)="openSchema($event)"><summary>Database tables @if (schemaLoaded()) { <span class="muted">({{ formatCount(tables().length) }})</span> }</summary>
+        <div class="schema-overview"><p><strong>GameStats</strong> — replay details and your match statistics.</p><p><strong>GamePlayers</strong> — players, teams, placements, and kills in each match.</p><p><strong>GameEliminations</strong> — elimination times, players, and weapons.</p><p><strong>Players</strong> — known player IDs, names, platforms, and skins.</p></div>
         @if (schemaLoading()) { <p class="muted schema-loading">Loading table structure…</p> }
         <div class="schema-grid">@for (table of tables(); track table.name) {
-          <details class="schema-table"><summary><strong>{{ table.name }}</strong><span class="muted">{{ table.rows }} rows</span></summary>
+          <details class="schema-table collapsible"><summary><strong>{{ table.name }}</strong><span class="muted">{{ formatCount(table.rows) }} rows</span></summary>
             <ul>@for (column of table.columns; track column.name) { <li><code>{{ column.name }}</code><span>{{ typeLabel(column.type) }}</span>@if (column.primaryKey) { <small>Primary key</small> }</li> }</ul>
           </details>
         }</div>
@@ -58,6 +59,7 @@ export class SqlPage {
   readonly result = signal<Result | null>(null);
   readonly error = signal('');
   readonly running = signal(false);
+  readonly formatCount = count;
   constructor() { void this.loadSaved(); }
   display(value: unknown): string { return value === null || value === undefined ? 'NULL' : String(value); }
   typeLabel(type: string): string {

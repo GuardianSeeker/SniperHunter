@@ -1,9 +1,10 @@
 import { Component, inject, OnDestroy, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { dateTime, placement } from './format';
+import { count, dateTime, placement } from './format';
 import { skinFallback, skinUrl } from './skin';
 import { LoadingService } from './loading.service';
 import { platformIcon } from './platform-icon';
+import { copyWithFeedback } from './copy-feedback';
 
 interface Player { playerID: string; username: string; platform: string | null; skin: string | null; isAI: number; games: number }
 interface Game { gameID: string; replayName: string; timestamp: string; mode: string; placement: number; kills: number }
@@ -15,26 +16,25 @@ type EventFilter = 'all' | 'you' | 'them' | 'trolled';
   imports: [RouterLink],
   template: `
     <main class="page player-page">
-      <a routerLink="/snipers" class="text-action">← Snipers List</a>
+      <a routerLink="/snipers" class="text-action">← Snipers list</a>
       @if (error()) { <p class="notice error" role="alert">{{ error() }}</p> }
       @if (player(); as p) {
         <section class="panel player-profile">
           <img class="profile-skin" [src]="skinUrl(p.skin, !!p.isAI)" (error)="skinFallback($event, !!p.isAI)" alt="" />
           <div class="profile-content">
-            <h1><button class="copy-text" type="button" (click)="copy(p.username)" title="Copy name">{{ p.username }} <span aria-hidden="true">⧉</span></button></h1>
-            <p class="identifier"><button class="copy-text" type="button" (click)="copy(p.playerID)" title="Copy player ID">{{ p.playerID }} <span aria-hidden="true">⧉</span></button></p>
-            <p class="profile-platform">@if (platformIcon(p.platform, !!p.isAI); as icon) { <img class="platform-icon platform-icon-invert" [src]="icon" alt="" /> }{{ p.isAI ? 'AI' : (p.platform || 'Unknown platform') }} · {{ summary()?.games ?? p.games }} games</p>
+            <h1><button class="copy-text" type="button" (click)="copy(p.username, $event)" title="Copy name">{{ p.username }} <span aria-hidden="true">⧉</span></button></h1>
+            <p class="identifier"><button class="copy-text" type="button" (click)="copy(p.playerID, $event)" title="Copy player ID">{{ p.playerID }} <span aria-hidden="true">⧉</span></button></p>
+            <p class="profile-platform">@if (platformIcon(p.platform, !!p.isAI); as icon) { <img class="platform-icon platform-icon-invert" [src]="icon" alt="" /> }{{ p.isAI ? 'AI' : (p.platform || 'Unknown platform') }} · {{ formatCount(summary()?.games ?? p.games) }} games</p>
             <p class="muted">Skin: {{ p.skin || 'Unknown' }}</p>
-            <a class="toolbar-action" [href]="trackerUrl(p.playerID)" target="_blank" rel="noopener noreferrer">Fortnite Tracker stats ↗</a>
-            @if (copied()) { <span class="muted" role="status">Copied</span> }
+            <a class="toolbar-action" [href]="trackerUrl(p.playerID)" target="_blank" rel="noopener noreferrer" (contextmenu)="copy(trackerUrl(p.playerID), $event)">Fortnite Tracker stats ↗</a>
           </div>
         </section>
         @if (summary(); as stats) {
           <div class="metrics-row profile-metrics">
-            <div class="metric" [class.selected]="eventFilter() === 'all'"><button type="button" class="metric-filter" (click)="selectEvent('all')" [attr.aria-pressed]="eventFilter() === 'all'"><span>Games together</span><strong>{{ stats.games }}</strong></button></div>
-            <div class="metric" [class.selected]="eventFilter() === 'you'"><button type="button" class="metric-filter" (click)="selectEvent('you')" [attr.aria-pressed]="eventFilter() === 'you'"><span>You eliminated them</span><strong>{{ stats.youEliminated }} <small>({{ stats.youKnocked }} knocked)</small></strong></button></div>
-            <div class="metric" [class.selected]="eventFilter() === 'them'"><button type="button" class="metric-filter" (click)="selectEvent('them')" [attr.aria-pressed]="eventFilter() === 'them'"><span>They eliminated you</span><strong>{{ stats.eliminatedYou }} <small>({{ stats.knockedYou }} knocked you)</small></strong></button></div>
-            <div class="metric" [class.selected]="eventFilter() === 'trolled'"><button type="button" class="metric-filter" (click)="selectEvent('trolled')" [attr.aria-pressed]="eventFilter() === 'trolled'"><span>Trolled you as a teammate</span><strong>{{ stats.trolledYou }} <small>({{ stats.trolledKnocked }} knocked you)</small></strong></button></div>
+            <div class="metric" [class.selected]="eventFilter() === 'all'"><button type="button" class="metric-filter" (click)="selectEvent('all')" [attr.aria-pressed]="eventFilter() === 'all'"><span>Games together</span><strong>{{ formatCount(stats.games) }}</strong></button></div>
+            <div class="metric" [class.selected]="eventFilter() === 'you'"><button type="button" class="metric-filter" (click)="selectEvent('you')" [attr.aria-pressed]="eventFilter() === 'you'"><span>You eliminated them</span><strong>{{ formatCount(stats.youEliminated) }} <small>({{ formatCount(stats.youKnocked) }} knocked)</small></strong></button></div>
+            <div class="metric" [class.selected]="eventFilter() === 'them'"><button type="button" class="metric-filter" (click)="selectEvent('them')" [attr.aria-pressed]="eventFilter() === 'them'"><span>They eliminated you</span><strong>{{ formatCount(stats.eliminatedYou) }} <small>({{ formatCount(stats.knockedYou) }} knocked you)</small></strong></button></div>
+            <div class="metric" [class.selected]="eventFilter() === 'trolled'"><button type="button" class="metric-filter" (click)="selectEvent('trolled')" [attr.aria-pressed]="eventFilter() === 'trolled'"><span>Trolled you as a teammate</span><strong>{{ formatCount(stats.trolledYou) }} <small>({{ formatCount(stats.trolledKnocked) }} knocked you)</small></strong></button></div>
           </div>
         }
         <h2>Games together</h2>
@@ -51,7 +51,7 @@ type EventFilter = 'all' | 'you' | 'them' | 'trolled';
             <div class="game-primary"><strong>{{ game.replayName }}</strong><span>{{ formatDate(game.timestamp) }}</span></div>
             <div><span class="field-label">Mode</span>{{ game.mode }}</div>
             <div><span class="field-label">Placement</span>{{ formatPlacement(game.placement) }}</div>
-            <div><span class="field-label">Kills</span>{{ game.kills }}</div>
+            <div><span class="field-label">Kills</span>{{ formatCount(game.kills) }}</div>
           </a>
         }</div>
         @if (!games().length && !loading()) { <p class="notice">No games match these filters.</p> }
@@ -71,7 +71,6 @@ export class PlayerPage implements OnDestroy {
   readonly after = signal('');
   readonly before = signal('');
   readonly eventFilter = signal<EventFilter>('all');
-  readonly copied = signal(false);
   readonly loading = signal(false);
   readonly hasMore = signal(true);
   readonly error = signal('');
@@ -79,6 +78,7 @@ export class PlayerPage implements OnDestroy {
   readonly skinFallback = skinFallback;
   readonly platformIcon = platformIcon;
   readonly formatDate = dateTime;
+  readonly formatCount = count;
   readonly formatPlacement = placement;
   trackerUrl(id: string): string { return `https://fortnitetracker.com/profile/all/${encodeURIComponent(id)}`; }
   private page = 0;
@@ -104,19 +104,7 @@ export class PlayerPage implements OnDestroy {
     this.eventFilter.set(value);
     void this.refresh(false);
   }
-  async copy(value: string): Promise<void> {
-    try {
-      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
-      else {
-        const input = document.createElement('textarea'); input.value = value; input.style.position = 'fixed'; input.style.opacity = '0';
-        document.body.append(input); input.select();
-        const copied = document.execCommand('copy'); input.remove();
-        if (!copied) throw new Error('Copy failed');
-      }
-      this.copied.set(true); setTimeout(() => this.copied.set(false), 1500);
-    }
-    catch { this.error.set('Could not copy to clipboard.'); }
-  }
+  copy(value: string, event: MouseEvent): void { event.stopPropagation(); void copyWithFeedback(value, event); }
   search(event: Event): void {
     this.query.set((event.target as HTMLInputElement).value);
     clearTimeout(this.timer);

@@ -3,7 +3,7 @@ import { UploadPage } from './upload-page';
 import { MatchPage } from './match-page';
 import { GamesPage } from './games-page';
 import { AboutPage } from './about-page';
-import { PlayersPage } from './players-page';
+import { PlayersPage } from './snipers-page';
 import { PlayerPage } from './player-page';
 import { SqlPage } from './sql-page';
 import { SettingsPage } from './settings-page';

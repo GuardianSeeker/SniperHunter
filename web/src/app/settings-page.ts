@@ -1,8 +1,8 @@
-import { Component, OnDestroy, signal } from '@angular/core';
+import { Component, OnDestroy, computed, signal } from '@angular/core';
 
 interface Settings { playerIds: string[]; sniperThreshold: number; autoSwitchLastMatch: boolean;
   hideTrayIcon: boolean; openBrowserOnLaunch: boolean; downloadMissingSkins: boolean; backToTopSide: 'left' | 'right';
-  proxyEnabled: boolean }
+  proxyEnabled: boolean; customCursorEnabled: boolean }
 interface SuggestedId { playerID: string; username: string; games: number }
 interface OwnerProfile { playerID: string; username: string }
 interface ConsoleEntry { id: number; time: string; localTime?: string; level: string; message: string }
@@ -26,8 +26,10 @@ interface ConsoleEntry { id: number; time: string; localTime?: string; level: st
           <label for="player-ids">Your player IDs, one per line</label>
           <textarea id="player-ids" [value]="playerIdsText()" (input)="changePlayerIds($event)" placeholder="Fortnite player ID"></textarea>
           <p class="muted">These IDs identify your eliminations when a replay's owner is missing. They also exclude your accounts from Snipers in this match.</p>
-          @if (suggested().length) { <div class="suggested-ids"><span class="muted">IDs found as replay owners:</span>
-            @for (item of suggested(); track item.playerID) { <button type="button" class="toolbar-action suggested-owner" (click)="addSuggested(item.playerID)"><strong>{{ item.username }}</strong><span>{{ item.playerID }} · {{ item.games }} games</span></button> }
+          @if (visibleSuggested().length) { <div class="suggested-ids"><span class="muted">IDs found as replay owners in two or more games:</span>
+            <div class="suggested-owner-list" [class.scrollable]="visibleSuggested().length > 2" [class.single]="visibleSuggested().length === 1">
+              @for (item of visibleSuggested(); track item.playerID) { <button type="button" class="toolbar-action suggested-owner" (click)="addSuggested(item.playerID)"><strong>{{ item.username }}</strong><span>{{ item.playerID }} · {{ formatCount(item.games) }} games</span></button> }
+            </div>
           </div> }
           @if (saveTarget() === 'accounts' && (saving() || message())) { <p role="status" class="settings-message">{{ saving() ? 'Saving…' : message() }}</p> }
         </section>
@@ -47,10 +49,11 @@ interface ConsoleEntry { id: number; time: string; localTime?: string; level: st
           <label class="settings-toggle"><input type="checkbox" [checked]="current.hideTrayIcon" (change)="patch('hideTrayIcon', $any($event.target).checked)" /> Hide the system tray icon</label>
           <label class="settings-toggle"><input type="checkbox" [checked]="current.openBrowserOnLaunch" (change)="patch('openBrowserOnLaunch', $any($event.target).checked)" /> Open the browser when Sniper Hunter starts</label>
           <label class="settings-toggle"><input type="checkbox" [checked]="current.downloadMissingSkins" (change)="patch('downloadMissingSkins', $any($event.target).checked)" /> Download missing skin icons</label>
-          <label for="back-to-top-side">Back to top button position</label>
-          <select id="back-to-top-side" [value]="current.backToTopSide" (change)="patch('backToTopSide', $any($event.target).value)">
-            <option value="left">Left</option><option value="right">Right</option>
-          </select>
+          <label class="settings-toggle"><input type="checkbox" [checked]="current.customCursorEnabled" (change)="patch('customCursorEnabled', $any($event.target).checked)" /> Use the Sniper Hunter cursor</label>
+          <fieldset class="setting-radio-group"><legend>Back to top button position</legend>
+            <label><input type="radio" name="back-to-top-side" value="left" [checked]="current.backToTopSide === 'left'" (change)="patch('backToTopSide', 'left')" /> Left</label>
+            <label><input type="radio" name="back-to-top-side" value="right" [checked]="current.backToTopSide === 'right'" (change)="patch('backToTopSide', 'right')" /> Right</label>
+          </fieldset>
           <p class="muted">The browser-launch setting takes effect on the next start.</p>
           @if (saveTarget() === 'general' && (saving() || message())) { <p role="status" class="settings-message">{{ saving() ? 'Saving…' : message() }}</p> }
         </section>
@@ -74,12 +77,17 @@ export class SettingsPage implements OnDestroy {
   readonly localUrl = signal('');
   readonly lanUrls = signal<string[]>([]);
   readonly suggested = signal<SuggestedId[]>([]);
+  readonly visibleSuggested = computed(() => {
+    const selected = new Set(this.playerIdsText().split(/\r?\n/).map(id => id.trim().toLowerCase()).filter(Boolean));
+    return this.suggested().filter(item => item.games >= 2 && !selected.has(item.playerID.toLowerCase()));
+  });
   readonly ownerProfiles = signal<OwnerProfile[]>([]);
   readonly saving = signal(false);
   readonly error = signal('');
   readonly message = signal('');
   readonly saveTarget = signal<'accounts' | 'access' | 'general'>('general');
   readonly entries = signal<ConsoleEntry[]>([]);
+  readonly formatCount = (value: number): string => new Intl.NumberFormat().format(value);
   private lastEntryId = 0;
   private saveTimer?: ReturnType<typeof setTimeout>;
   private saveVersion = 0;

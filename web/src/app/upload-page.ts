@@ -1,4 +1,5 @@
 import { Component, OnDestroy, signal } from '@angular/core';
+import { count } from './format';
 
 interface ReplayError { name: string; message: string }
 
@@ -58,7 +59,7 @@ export class UploadPage implements OnDestroy {
       if (!data.total || !data.batchID) return;
       this.errors.set([]);
       this.batchID = data.batchID;
-      this.message.set(`${data.total} replay file${data.total === 1 ? '' : 's'} selected. Parsing continues in the status bar.`);
+      this.message.set(`${count(data.total)} replay file${data.total === 1 ? '' : 's'} selected. Parsing continues in the status bar.`);
       clearInterval(this.poller);
       this.poller = setInterval(() => void this.pollBatch(), 1000);
       void this.pollBatch();
@@ -78,7 +79,7 @@ export class UploadPage implements OnDestroy {
       const data = await response.json() as { total: number; parsed: number; added: number; duplicates: number; failed: number; errors: ReplayError[] };
       for (const item of data.errors) this.addError(item.name, item.message);
       if (data.parsed + data.failed >= data.total) {
-        this.message.set(`${data.added} replays added${data.duplicates ? `; ${data.duplicates} already added` : ''}${data.failed ? `; ${data.failed} failed to parse` : ''}.`);
+        this.message.set(`${count(data.added)} replays added${data.duplicates ? `; ${count(data.duplicates)} already added` : ''}${data.failed ? `; ${count(data.failed)} failed to parse` : ''}.`);
         clearInterval(this.poller);
       }
     } catch { /* retry on the next poll */ }
@@ -96,7 +97,7 @@ export class UploadPage implements OnDestroy {
     let uploaded = 0;
     try {
       for (const [index, file] of replays.entries()) {
-        this.message.set(`Adding replay ${index + 1} of ${replays.length}…`);
+        this.message.set(`Adding replay ${count(index + 1)} of ${count(replays.length)}…`);
         try {
           const response = await fetch('/api/replays', { method: 'POST', body: file,
             headers: { 'Content-Type': 'application/octet-stream', 'X-Replay-Name': encodeURIComponent(file.name),
@@ -105,7 +106,7 @@ export class UploadPage implements OnDestroy {
           uploaded++;
         } catch (error) { this.addError(file.name, error instanceof Error ? error.message : 'Could not add replay.'); }
       }
-      this.message.set(`${uploaded} of ${replays.length} replay files added. Parsing continues in the status bar.`);
+      this.message.set(`${count(uploaded)} of ${count(replays.length)} replay files added. Parsing continues in the status bar.`);
       if (uploaded) {
         this.poller = setInterval(() => void this.pollBatch(), 1000);
         void this.pollBatch();

@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { Elimination, MatchDetails } from './match-types';
@@ -7,6 +7,7 @@ import { skinFallback, skinUrl } from './skin';
 import { AccessService } from './access.service';
 import { LastMatchMap } from './last-match-map';
 import { platformIcon } from './platform-icon';
+import { copyWithFeedback } from './copy-feedback';
 
 @Component({
   selector: 'app-match-page',
@@ -34,14 +35,14 @@ import { platformIcon } from './platform-icon';
       } @else if (details(); as data) {
         @if (data.match; as match) {
           <div class="panel-grid">
-            <section class="panel" aria-labelledby="match-information">
+            <section class="panel" aria-labelledby="match-information" #matchInfoPanel>
               <h2 id="match-information">Match information</h2>
               <dl class="detail-list">
                 <div><dt>Session ID</dt><dd class="identifier">{{ match.gameID }}</dd></div>
                 <div><dt>Timestamp</dt><dd>{{ formatDate(match.timestamp) }}</dd></div>
                 <div><dt>File</dt><dd class="filename">{{ match.replayName }}</dd></div>
                 <div><dt>Mode</dt><dd>{{ match.mode }}</dd></div>
-                <div><dt>Real players</dt><dd>{{ match.players }} / {{ match.players + match.bots }}</dd></div>
+                <div><dt>Real players</dt><dd>{{ formatCount(match.players) }} / {{ formatCount(match.players + match.bots) }}</dd></div>
                 <div><dt>Duration</dt><dd>{{ formatDuration(match.duration) }}</dd></div>
               </dl>
             </section>
@@ -62,7 +63,7 @@ import { platformIcon } from './platform-icon';
                 @if (data.platforms.length) {
                   <div class="platform-list">
                     @for (item of data.platforms; track item.platform) {
-                      <div><span>{{ item.platform }}</span><strong>{{ item.players }} {{ item.players === 1 ? 'player' : 'players' }}</strong></div>
+                      <div><span>{{ item.platform }}</span><strong>{{ formatCount(item.players) }} {{ item.players === 1 ? 'player' : 'players' }}</strong></div>
                     }
                   </div>
                 } @else {
@@ -70,17 +71,15 @@ import { platformIcon } from './platform-icon';
                 }
               </div>
             </section>
-          </div>
-
-          <section class="panel" aria-labelledby="snipers-heading">
-            <h2 id="snipers-heading" class="section-heading"><span>Snipers in this match</span><span class="heading-count">{{ data.snipers.length }}</span></h2>
+          <section class="panel match-snipers-panel" [class.empty-snipers]="!data.snipers.length" aria-labelledby="snipers-heading" [style.--match-info-height.px]="matchInfoHeight() || null">
+            <h2 id="snipers-heading" class="section-heading"><span>Snipers in this match</span><span class="heading-count">{{ formatCount(data.snipers.length) }}</span></h2>
             @if (data.snipers.length) {
               <div class="match-snipers">
                 @for (player of data.snipers; track player.playerID) {
-                  <div class="team-member match-sniper-card" [class.selected-member]="selectedMemberId() === player.playerID">
+                  <div class="team-member match-sniper-card" [class.selected-member]="selectedMemberId() === player.playerID" (contextmenu)="copyName(player.username, $event)" (mouseenter)="showTeamTooltip(player.team, $event, sniperAvatar)" (mouseleave)="hideTeamTooltip()">
                     <button type="button" class="member-select" (click)="selectFromTeam(player.username, player.playerID)">
-                      <img [src]="skinUrl(player.skin, false)" (error)="skinFallback($event, false)" alt="" loading="lazy" />
-                      <span><strong>{{ player.username }}</strong><small>{{ player.games }} games together</small></span>
+                      <span #sniperAvatar class="team-avatar" [style.--team-color]="teamColor(player.team)"><img [src]="skinUrl(player.skin, false)" (error)="skinFallback($event, false)" alt="" loading="lazy" /></span>
+                      <span><strong>{{ player.username }}</strong><small>{{ formatCount(player.games) }} games together</small></span>
                     </button>
                     <a class="member-info" [routerLink]="['/player', player.playerID]" [attr.aria-label]="'View ' + player.username + ' profile'" title="Player profile">@if (platformIcon(player.platform, !!player.isBot); as icon) { <img [src]="icon" alt="" aria-hidden="true" /> }<span>i</span></a>
                   </div>
@@ -88,14 +87,15 @@ import { platformIcon } from './platform-icon';
               </div>
             } @else { <p class="muted">No repeat opponents recorded in this match.</p> }
           </section>
+          </div>
 
           <app-last-match-map [gameID]="match.gameID" [replayName]="match.replayName"
             [activePlayerId]="activeMapPlayerId()" (activePlayerChange)="activeMapPlayerId.set($event)"
             (playerJumpToTeam)="jumpFromMap($event)" />
 
           <div class="feed-team-grid">
-            <details class="panel feed-panel" open>
-              <summary id="elimination-feed"><span>Elimination Feed</span><span class="heading-count">{{ filteredEliminations().length }} / {{ data.eliminations.length }}</span></summary>
+            <details class="panel feed-panel collapsible" open>
+              <summary id="elimination-feed"><span>Elimination Feed</span><span class="heading-count">{{ formatCount(filteredEliminations().length) }} / {{ formatCount(data.eliminations.length) }}</span></summary>
               <div class="feed-filters">
                 <label>Player name <input type="search" [value]="nameQuery()" (input)="updateName($event)" placeholder="Search names" /></label>
                 <label>Team # <input type="search" [value]="teamQuery()" (input)="updateTeam($event)" placeholder="Team number" /></label>
@@ -103,21 +103,21 @@ import { platformIcon } from './platform-icon';
               @if (filteredEliminations().length) {
                 <div class="feed-list">
                   @for (item of filteredEliminations(); track item.id) {
-                    <div class="feed-row" [style.background]="eliminationBackground(item)">
+                    <div class="feed-row">
                       <time>{{ formatKillTime(item.time) }}</time>
                       <div class="feed-event">
-                        <button type="button" class="person-inline" (click)="selectFromFeed(item.killerID)"><img [src]="skinUrl(item.killerSkin, !!item.killerBot)" (error)="skinFallback($event, !!item.killerBot)" alt="" loading="lazy" />{{ item.killerName || 'Unknown player' }}</button>
+                        <button type="button" class="person-inline" (click)="selectFromFeed(item.killerID)" (contextmenu)="copyName(item.killerName || 'Unknown player', $event)" (mouseenter)="showTeamTooltip(teamByPlayer().get(item.killerID), $event, killerAvatar)" (mouseleave)="hideTeamTooltip()"><span #killerAvatar class="team-avatar" [style.--team-color]="teamRingColor(item.killerID)"><img [src]="skinUrl(item.killerSkin, !!item.killerBot)" (error)="skinFallback($event, !!item.killerBot)" alt="" loading="lazy" /></span>{{ item.killerName || 'Unknown player' }}</button>
                         <span>{{ item.knocked ? 'knocked' : 'eliminated' }}</span>
-                        <button type="button" class="person-inline" (click)="selectFromFeed(item.killedID)"><img [src]="skinUrl(item.killedSkin, !!item.killedBot)" (error)="skinFallback($event, !!item.killedBot)" alt="" loading="lazy" />{{ item.killedName || 'Unknown player' }}</button>
-                        <span class="muted weapon">{{ item.weapon || 'Unknown weapon' }}</span>
+                        <button type="button" class="person-inline" (click)="selectFromFeed(item.killedID)" (contextmenu)="copyName(item.killedName || 'Unknown player', $event)" (mouseenter)="showTeamTooltip(teamByPlayer().get(item.killedID), $event, killedAvatar)" (mouseleave)="hideTeamTooltip()"><span #killedAvatar class="team-avatar" [style.--team-color]="teamRingColor(item.killedID)"><img [src]="skinUrl(item.killedSkin, !!item.killedBot)" (error)="skinFallback($event, !!item.killedBot)" alt="" loading="lazy" /></span>{{ item.killedName || 'Unknown player' }}</button>
                       </div>
+                      <span class="muted weapon">{{ item.weapon || 'Unknown weapon' }}</span>
                     </div>
                   }
                 </div>
               } @else { <p class="muted">No eliminations match the current search.</p> }
             </details>
-            <details class="panel team-panel" open>
-              <summary id="team-heading"><span>Teams</span><span class="heading-count">{{ data.teams.length }}</span></summary>
+            <details class="panel team-panel collapsible" open>
+              <summary id="team-heading"><span>Teams</span><span class="heading-count">{{ formatCount(data.teams.length) }}</span></summary>
               <div class="team-table-scroll"><table class="team-table">
                 <thead><tr>
                   <th><button type="button" (click)="sortTeams('team')">Team {{ sortMark('team') }}</button></th>
@@ -127,17 +127,17 @@ import { platformIcon } from './platform-icon';
                   <th><button type="button" (click)="sortTeams('deaths')">Deaths {{ sortMark('deaths') }}</button></th>
                 </tr></thead>
                 <tbody>@for (team of sortedTeams(); track team.team) {
-                  <tr><td><button type="button" class="team-select" (click)="selectTeam(team.team)" [attr.aria-label]="'Filter elimination feed to team ' + team.team"><span class="team-swatch" [style.background]="teamColor(team.team)"></span><span class="team-number">{{ team.team }}</span></button></td><td><div class="team-members">
+                  <tr><td><button type="button" class="team-select" (click)="selectTeam(team.team)" [attr.aria-label]="'Filter elimination feed to team ' + team.team"><span class="team-swatch" [style.background]="teamColor(team.team)"></span><span class="team-number">{{ formatCount(team.team) }}</span></button></td><td><div class="team-members">
                     @for (member of team.members; track member.playerID) {
-                      <div class="team-member" [id]="'member-' + member.playerID" [class.selected-member]="selectedMemberId() === member.playerID">
+                      <div class="team-member" [id]="'member-' + member.playerID" [class.selected-member]="selectedMemberId() === member.playerID" (contextmenu)="copyName(member.username, $event)">
                         <button type="button" class="member-select" (click)="selectFromTeam(member.username, member.playerID)" [attr.aria-pressed]="selectedMemberId() === member.playerID">
-                          <img [src]="skinUrl(member.skin, !!member.isBot)" (error)="skinFallback($event, !!member.isBot)" alt="" loading="lazy" />
-                          <span class="member-name">{{ member.username }}</span><span class="member-kills">{{ member.kills }} K · {{ member.deaths }} D</span>
+                          <span class="team-avatar" [style.--team-color]="teamColor(member.team)"><img [src]="skinUrl(member.skin, !!member.isBot)" (error)="skinFallback($event, !!member.isBot)" alt="" loading="lazy" /></span>
+                          <span class="member-name">{{ member.username }}</span><span class="member-kills">{{ formatCount(member.kills) }} K · {{ formatCount(member.deaths) }} D</span>
                         </button>
                         <a class="member-info" [routerLink]="['/player', member.playerID]" [attr.aria-label]="'View ' + member.username + ' profile'" title="Player profile">@if (platformIcon(member.platform, !!member.isBot); as icon) { <img [src]="icon" alt="" aria-hidden="true" /> }<span>i</span></a>
                       </div>
                     }
-                  </div></td><td>{{ formatPlacement(team.placement) }}</td><td>{{ team.kills }}</td><td>{{ team.deaths }}</td></tr>
+                  </div></td><td>{{ formatPlacement(team.placement) }}</td><td>{{ formatCount(team.kills) }}</td><td>{{ formatCount(team.deaths) }}</td></tr>
                 }</tbody>
               </table></div>
             </details>
@@ -153,12 +153,15 @@ import { platformIcon } from './platform-icon';
     </main>
   `,
 })
-export class MatchPage {
+export class MatchPage implements OnDestroy {
   readonly access = inject(AccessService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private requestNumber = 0;
   private neighborRequest = 0;
+  private teamTooltip: HTMLElement | null = null;
+  private matchInfoObserver?: ResizeObserver;
+  readonly matchInfoHeight = signal(0);
   readonly newerId = signal<string | null>(null);
   readonly olderId = signal<string | null>(null);
   readonly selectedId = signal<string | null>(null);
@@ -208,13 +211,47 @@ export class MatchPage {
   selectFromFeed(id: string): void {
     if (this.selectedMemberId() === id) { this.selectedMemberId.set(null); return; }
     this.selectedMemberId.set(id);
-    requestAnimationFrame(() => document.getElementById(`member-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }));
+    this.revealTeamMember(id);
   }
   jumpFromMap(id: string): void {
     const playerID = /^[0-9a-f]{32}$/i.test(id) ? id.toLowerCase() : id;
     this.selectedMemberId.set(playerID);
-    requestAnimationFrame(() => document.getElementById(`member-${playerID}`)?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }));
+    this.revealTeamMember(playerID);
   }
+  private revealTeamMember(id: string): void {
+    requestAnimationFrame(() => {
+      const member = document.getElementById(`member-${id}`);
+      if (!member) return;
+      const list = member.closest<HTMLElement>('.team-members');
+      if (list) {
+        const row = member.getBoundingClientRect(), area = list.getBoundingClientRect();
+        if (row.top < area.top) list.scrollTop -= area.top - row.top + 4;
+        else if (row.bottom > area.bottom) list.scrollTop += row.bottom - area.bottom + 4;
+      }
+      requestAnimationFrame(() => {
+        const row = member.getBoundingClientRect();
+        const top = (document.querySelector('.top-nav')?.getBoundingClientRect().height || 0) + 12;
+        const bottom = window.innerHeight - 72;
+        if (row.top < top) window.scrollBy({ top: row.top - top, behavior: 'smooth' });
+        else if (row.bottom > bottom) window.scrollBy({ top: row.bottom - bottom, behavior: 'smooth' });
+      });
+    });
+  }
+  showTeamTooltip(team: number | undefined, event: MouseEvent, anchor?: HTMLElement): void {
+    this.hideTeamTooltip();
+    const bounds = (anchor || event.currentTarget as HTMLElement).getBoundingClientRect();
+    const tooltip = document.createElement('span');
+    tooltip.className = 'team-hover-tooltip';
+    tooltip.textContent = team === undefined ? 'Team unknown' : `Team ${team}`;
+    document.body.append(tooltip);
+    const size = tooltip.getBoundingClientRect();
+    const width = size.width;
+    tooltip.style.left = `${Math.max(8, Math.min(window.innerWidth - width - 8, bounds.left + bounds.width / 2 - width / 2))}px`;
+    tooltip.style.top = `${bounds.top > size.height + 6 ? bounds.top - size.height - 6 : bounds.bottom + 6}px`;
+    this.teamTooltip = tooltip;
+  }
+  hideTeamTooltip(): void { this.teamTooltip?.remove(); this.teamTooltip = null; }
+  ngOnDestroy(): void { this.hideTeamTooltip(); this.matchInfoObserver?.disconnect(); }
   selectFromTeam(name: string, id?: string): void {
     if (id && this.selectedMemberId() === id && this.nameQuery() === name) {
       this.nameQuery.set(''); this.selectedMemberId.set(null); this.activeMapPlayerId.set(null); return;
@@ -239,10 +276,8 @@ export class MatchPage {
     const light = [34, 41, 29][Math.abs(value) % 3];
     return `hsl(${hue.toFixed(1)} 72% ${light}% / ${alpha})`;
   }
-  eliminationBackground(item: Elimination): string {
-    const team = this.teamByPlayer().get(item.killerID);
-    return team === undefined ? '' : `linear-gradient(270deg, ${this.teamColor(team, .5)} 0%, transparent 30%)`;
-  }
+  teamRingColor(id: string): string { const team = this.teamByPlayer().get(id); return team === undefined ? '#777b8a' : this.teamColor(team); }
+  copyName(name: string, event: MouseEvent): void { void copyWithFeedback(name, event); }
 
   constructor() {
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(() => {
@@ -299,7 +334,19 @@ export class MatchPage {
     } catch (error) {
       if (request === this.requestNumber) this.error.set(error instanceof Error ? error.message : 'Could not load match.');
     } finally {
-      if (request === this.requestNumber) this.loading.set(false);
+      if (request === this.requestNumber) {
+        this.loading.set(false);
+        requestAnimationFrame(() => {
+          this.matchInfoObserver?.disconnect();
+          const panel = document.getElementById('match-information')?.closest('.panel');
+          if (!panel) return;
+          this.matchInfoObserver = new ResizeObserver(() => {
+            const height = Math.round(panel.getBoundingClientRect().height);
+            if (height !== this.matchInfoHeight()) this.matchInfoHeight.set(height);
+          });
+          this.matchInfoObserver.observe(panel);
+        });
+      }
     }
   }
 }

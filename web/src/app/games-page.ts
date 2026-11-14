@@ -2,12 +2,12 @@ import { Component, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { inject } from '@angular/core';
 import type { RecentGame } from './match-types';
-import { dateTime, distance, placement } from './format';
+import { count, dateTime, decimal, distance, placement } from './format';
 import { AccessService } from './access.service';
 
 interface GamesResponse { games: RecentGame[]; total: number; page: number; pageSize: number }
 interface Metrics { games: number; averagePlacement: number | null; realPercent: number;
-  creativeGames: number; creativePercent: number; nonCreativeGames: number; nonCreativePercent: number; distanceTravelled: number; gamesWon: number; totalKills: number; kd: number | null; winPercent: number }
+  creativeGames: number; creativePercent: number; nonCreativeGames: number; nonCreativePercent: number; distanceTravelled: number; timePlayed: number; gamesWon: number; totalKills: number; kd: number | null; winPercent: number }
 
 @Component({
   selector: 'app-games-page',
@@ -17,14 +17,15 @@ interface Metrics { games: number; averagePlacement: number | null; realPercent:
       <div class="page-heading"><div><h1>Recent games</h1><p class="muted">Search and review saved matches.</p></div></div>
       @if (metrics(); as stats) {
         <div class="metrics-row">
-          <div class="metric" [class.selected]="kind() === ''"><button type="button" class="metric-filter" (click)="setKind('')" [attr.aria-pressed]="kind() === ''"><span>Games played</span><strong>{{ stats.games }}</strong></button></div>
-          <div class="metric"><span>Average placement</span><strong>{{ stats.averagePlacement ?? '—' }}</strong></div>
-          <div class="metric"><span>Real players</span><strong>{{ stats.realPercent.toFixed(1) }}%</strong></div>
-          <div class="metric" [class.selected]="kind() === 'creative'"><button type="button" class="metric-filter" (click)="setKind('creative')" [attr.aria-pressed]="kind() === 'creative'"><span>Creative games</span><strong>{{ stats.creativeGames }} <small>({{ stats.creativePercent.toFixed(1) }}%)</small></strong></button></div>
-          <div class="metric" [class.selected]="kind() === 'noncreative'"><button type="button" class="metric-filter" (click)="setKind('noncreative')" [attr.aria-pressed]="kind() === 'noncreative'"><span>Non-creative games</span><strong>{{ stats.nonCreativeGames }} <small>({{ stats.nonCreativePercent.toFixed(1) }}%)</small></strong></button></div>
+          <div class="metric" [class.selected]="kind() === ''"><button type="button" class="metric-filter" (click)="setKind('')" [attr.aria-pressed]="kind() === ''"><span>Games played</span><strong>{{ formatCount(stats.games) }}</strong></button></div>
+          <div class="metric" [class.selected]="kind() === 'noncreative'"><button type="button" class="metric-filter" (click)="setKind('noncreative')" [attr.aria-pressed]="kind() === 'noncreative'"><span>Non-creative games</span><strong>{{ formatCount(stats.nonCreativeGames) }} <small>({{ formatDecimal(stats.nonCreativePercent, 1) }}%)</small></strong></button></div>
+          <div class="metric" [class.selected]="kind() === 'creative'"><button type="button" class="metric-filter" (click)="setKind('creative')" [attr.aria-pressed]="kind() === 'creative'"><span>Creative games</span><strong>{{ formatCount(stats.creativeGames) }} <small>({{ formatDecimal(stats.creativePercent, 1) }}%)</small></strong></button></div>
+          <div class="metric" [class.selected]="kind() === 'won'"><button type="button" class="metric-filter" (click)="setKind('won')" [attr.aria-pressed]="kind() === 'won'"><span>Games won</span><strong>{{ formatCount(stats.gamesWon) }} <small>({{ formatDecimal(stats.winPercent, 1) }}%)</small></strong></button></div>
+          <div class="metric"><span>Average placement</span><strong>{{ stats.averagePlacement === null ? '—' : formatDecimal(stats.averagePlacement, 2) }}</strong></div>
+          <div class="metric"><span>Total kills</span><strong>{{ formatCount(stats.totalKills) }} <small>(KD {{ stats.kd === null ? '—' : formatDecimal(stats.kd, 2) }})</small></strong></div>
+          <div class="metric"><span>Real players</span><strong>{{ formatDecimal(stats.realPercent, 1) }}%</strong></div>
+          <div class="metric"><span>Time played</span><strong>{{ formatCount(timeHours(stats.timePlayed)) }} <small>hrs</small> {{ timeMinutes(stats.timePlayed) }} <small>mins</small></strong></div>
           <div class="metric"><span>Distance travelled</span><strong>{{ formatDistance(stats.distanceTravelled) }}</strong></div>
-          <div class="metric" [class.selected]="kind() === 'won'"><button type="button" class="metric-filter" (click)="setKind('won')" [attr.aria-pressed]="kind() === 'won'"><span>Games won</span><strong>{{ stats.gamesWon }} <small>({{ stats.winPercent.toFixed(1) }}%)</small></strong></button></div>
-          <div class="metric"><span>Total kills</span><strong>{{ stats.totalKills }} <small>(KD {{ stats.kd === null ? '—' : stats.kd.toFixed(2) }})</small></strong></div>
         </div>
       }
       <div class="list-toolbar">
@@ -33,13 +34,12 @@ interface Metrics { games: number; averagePlacement: number | null; realPercent:
         <label>After <input type="date" [value]="after()" [max]="before() || null" (change)="changeDate($event, 'after')" /></label>
         <label>Before <input type="date" [value]="before()" [min]="after() || null" (change)="changeDate($event, 'before')" /></label>
         @if (after() || before()) { <button type="button" class="toolbar-action" (click)="clearDates()">Clear dates</button> }
-        @if (!access.readOnly()) { <label class="file-button">Import old database.db <input type="file" accept=".db" (change)="importOldDatabase($event)" [disabled]="importing()" /></label> }
+        @if (!access.readOnly()) { <label class="file-button games-import-control">Import old database.db <input type="file" accept=".db" (change)="importOldDatabase($event)" [disabled]="importing()" /></label> }
       </div>
       @if (importMessage()) { <p class="notice" role="status">{{ importMessage() }}</p> }
       @if (loading()) { <p role="status">Loading games…</p> }
       @else if (error()) { <div class="notice error" role="alert">{{ error() }}</div> }
       @else if (games().length) {
-        <p class="muted list-count">Showing {{ games().length }} of {{ total() }} games</p>
         <div class="game-list">
           @for (game of games(); track game.gameID) {
             <div class="game-row clickable-game" role="link" tabindex="0" [attr.aria-label]="'Open ' + game.replayName" (click)="openGame(game)" (keydown.enter)="openGameFromKey($event, game)">
@@ -77,6 +77,10 @@ export class GamesPage {
   readonly formatDate = dateTime;
   readonly formatPlacement = placement;
   readonly formatDistance = distance;
+  readonly formatCount = count;
+  readonly formatDecimal = decimal;
+  timeHours(milliseconds: number): number { return Math.floor(Math.max(0, milliseconds) / 3600000); }
+  timeMinutes(milliseconds: number): number { return Math.floor(Math.max(0, milliseconds) / 60000) % 60; }
   private timer?: ReturnType<typeof setTimeout>;
   private request = 0;
   private metricsRequest = 0;
@@ -149,7 +153,7 @@ export class GamesPage {
       const response = await fetch('/api/databases/import', { method: 'POST', body: file });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Import failed.');
-      this.importMessage.set(`Imported ${result.imported} new game${result.imported === 1 ? '' : 's'}.`);
+      this.importMessage.set(`Imported ${count(result.imported)} new game${result.imported === 1 ? '' : 's'}.`);
       await this.refresh();
     } catch (error) { this.importMessage.set(error instanceof Error ? error.message : 'Import failed.'); }
     finally { input.value = ''; this.importing.set(false); }
@@ -167,7 +171,7 @@ export class GamesPage {
       return;
     }
     const request = ++this.metricsRequest;
-    const params = this.filterParams(false);
+    const params = this.filterParams();
     await Promise.all([this.load(1), fetch(`/api/matches/metrics?${params}`).then(response => {
       if (!response.ok) throw new Error('Could not load game statistics.');
       return response.json();

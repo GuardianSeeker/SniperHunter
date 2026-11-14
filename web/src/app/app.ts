@@ -5,7 +5,7 @@ import { UpdateService } from './update.service';
 import { AccessService } from './access.service';
 
 interface AppStatus { kind: string; message: string; progress: number; addedAt?: number; addedSource?: string;
-  autoSwitchLastMatch?: boolean; backToTopSide?: 'left' | 'right' }
+  autoSwitchLastMatch?: boolean; backToTopSide?: 'left' | 'right'; customCursorEnabled?: boolean }
 interface Update { version: string; url: string }
 
 @Component({
@@ -64,12 +64,27 @@ export class App implements OnDestroy {
 
   private readonly updateScroll = (): void => { this.showBackToTop.set(window.scrollY > 120); };
 
+  setNavHoverOrigin(event: PointerEvent): void {
+    const link = event.currentTarget as HTMLElement;
+    const rect = link.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const radius = Math.max(
+      Math.hypot(x, y), Math.hypot(rect.width - x, y),
+      Math.hypot(x, rect.height - y), Math.hypot(rect.width - x, rect.height - y),
+    );
+    link.style.setProperty('--hover-x', `${x}px`);
+    link.style.setProperty('--hover-y', `${y}px`);
+    link.style.setProperty('--hover-radius', `${Math.ceil(radius)}px`);
+  }
+
   private async loadStatus(): Promise<void> {
     try {
       const response = await fetch('/api/status');
       if (response.ok) {
         const state = await response.json() as AppStatus;
         this.status.set(state);
+        document.documentElement.classList.toggle('native-cursor', state.customCursorEnabled === false);
         this.backToTopSide.set(state.backToTopSide === 'right' ? 'right' : 'left');
         if (!this.receivedFirstStatus) {
           this.receivedFirstStatus = true;

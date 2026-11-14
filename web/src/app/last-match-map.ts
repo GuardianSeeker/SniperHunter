@@ -1,5 +1,6 @@
 import { Component, ElementRef, computed, effect, inject, input, output, signal, viewChild, OnDestroy } from '@angular/core';
 import { AccessService } from './access.service';
+import { count, decimal } from './format';
 
 type Sample = [number, number, number, number, number];
 // A measured 25 m move changed replay X from 98,056 to 95,500.
@@ -74,10 +75,16 @@ function transform(anchors: Anchor[]): ((x: number, y: number) => [number, numbe
 @Component({
   selector: 'app-last-match-map',
   template: `
-    <details class="panel match-map-panel" (toggle)="onToggle($event)">
+    <details class="panel match-map-panel collapsible" (toggle)="onToggle($event)">
       <summary class="map-summary">Player movement map</summary>
       @if (open()) { <div #mapContent class="map-content">
-      <div class="map-heading"><p class="muted">Movement is read from the replay file and kept in memory for this session, without adding it to the database.</p>
+      <div class="map-heading"><div class="map-intro"><p class="muted">Movement is read from the replay file and kept in memory for this session, without adding it to the database.</p>
+        <div class="map-guide">
+          <div><strong>Time</strong><span>Use the slider. With the map focused: ←/↓ back, →/↑ forward (steps follow Play speed); Space plays or pauses.</span></div>
+          <div><strong>View</strong><span>Double-click to zoom in 1×; double-right-click to zoom out 1×. Drag to pan. Click a player to follow; double-click them to find their Teams card.</span></div>
+          <div><strong>Overlays</strong><span>@if (timeline()) { {{ formatCount(markers().length) }} players shown. } Coloured dots show 5 seconds before and after. Visibility shading is estimated; storm circles show the current and next zones.</span></div>
+          <div><strong>Alignment</strong><span>@if (!calibrated()) { Positions are approximate until three points are calibrated. } Time offset shifts movement and storm; positive moves them forward.</span></div>
+        </div></div>
         @if (access.readOnly()) { <strong>{{ selectedMap()?.name || 'No map selected' }}</strong> }
         @else { <div class="map-picker-controls">
           <button type="button" class="secondary-button map-arrow" [disabled]="selectedMapIndex() <= 0" (click)="stepMap(-1)" aria-label="Previous map"><span class="map-button-glyph">←</span></button>
@@ -106,8 +113,8 @@ function transform(anchors: Anchor[]): ((x: number, y: number) => [number, numbe
         @if (hasImage()) { <img class="map-loading-preview" [src]="imageUrl()" alt="Uploaded Fortnite map" /> }
       }
       @else if (!timeline()) {
-        <p class="muted" role="status">{{ movementMessage() }}</p>
-        <button type="button" class="secondary-button" (click)="retry()">Try again</button>
+        <p class="muted map-movement-message" role="status">{{ movementMessage() }}</p>
+        <button type="button" class="toolbar-action map-retry" (click)="retry()">Try again</button>
       }
       @if (timeline(); as data) {
         @if (!data.tracks.length) { <p class="muted">The reader returned no player locations for this replay.</p> }
@@ -126,7 +133,7 @@ function transform(anchors: Anchor[]): ((x: number, y: number) => [number, numbe
             <div #mapViewport class="map-viewport" tabindex="0" role="region" aria-label="Player movement map"
               [style.width.px]="mapViewportWidth()" [style.height.px]="mapViewportHeight()"
               [class.pannable]="zoom() > 1" [class.dragging]="draggingMap()" (keydown)="onMapKeydown($event)"
-              (dblclick)="onMapDoubleClick($event)"
+              (dblclick)="onMapDoubleClick($event)" (contextmenu)="$event.preventDefault()"
               (pointerdown)="startPan($event)" (pointermove)="movePan($event)" (pointerup)="endPan($event)" (pointercancel)="endPan($event)">
               <div #mapStage class="map-stage" [style.width.px]="mapStageWidth()" (click)="placeAnchor($event)" [class.calibrating]="pendingAnchor()">
               <img [src]="imageUrl()" alt="Uploaded Fortnite map" (load)="onMapImageLoad($event)" />
@@ -155,7 +162,7 @@ function transform(anchors: Anchor[]): ((x: number, y: number) => [number, numbe
                     <path d="M 50 10 L 80 78 L 59 73 A 9 9 0 0 0 41 73 L 20 78 Z"
                       [attr.fill]="teamColor(marker.team)" stroke="#1A1A1A" stroke-width="2.5" stroke-linejoin="miter" stroke-linecap="square" />
                   </svg>
-                  <span class="map-tooltip">{{ marker.team }} | {{ marker.name }} <small class="map-elevation">({{ marker.elevation }})</small></span>
+                  <span class="map-tooltip">{{ formatCount(marker.team) }} | {{ marker.name }} <small class="map-elevation">({{ marker.elevation }})</small></span>
                 </button>
               }
               @for (anchor of alignmentOpen() && !access.readOnly() ? anchorMarkers() : []; track $index) {
@@ -163,12 +170,12 @@ function transform(anchors: Anchor[]): ((x: number, y: number) => [number, numbe
               }
             </div></div>
             @if (!access.readOnly()) {
-              <details class="map-calibration" [open]="alignmentOpen()" (toggle)="alignmentOpen.set($any($event.target).open)"><summary>Map alignment and synchronization · {{ calibrated() ? 'Calibrated' : anchors().length + '/3 points marked' }}</summary>
+              <details class="map-calibration collapsible" [open]="alignmentOpen()" (toggle)="alignmentOpen.set($any($event.target).open)"><summary>Map alignment and synchronization · {{ calibrated() ? 'Calibrated' : anchors().length + '/3 points marked' }}</summary>
                 <p class="muted">Calibration saves only after all three points are set. Visit three distinct corners of the map for the best alignment. Rotation is saved separately, even before calibration. X and Y are Unreal world coordinates in approximately centimeter-scale units.</p>
                 <div class="map-calibration-controls"><label>Player at {{ clock(time()) }}
                   <select [value]="chosenId()" (change)="choosePlayer($event)">
                     <option value="">Choose player</option>
-                    @for (track of availableTracks(); track track.id) { <option [value]="track.id">{{ track.name }} · Team {{ track.team }}</option> }
+                    @for (track of availableTracks(); track track.id) { <option [value]="track.id">{{ track.name }} · Team {{ formatCount(track.team) }}</option> }
                   </select></label>
                   <button type="button" class="secondary-button" (click)="turnClockwise()">Rotate coordinates 90° clockwise ({{ rotation() }}°)</button>
                   <label>Map time offset (ms)
@@ -182,7 +189,6 @@ function transform(anchors: Anchor[]): ((x: number, y: number) => [number, numbe
                 @if (chosenSample(); as sample) { <p class="map-coordinates">Selected world position: X {{ sample[1] }}, Y {{ sample[2] }}</p> }
               </details>
             }
-            <p class="muted map-footnote">{{ markers().length }} players shown. @if (!calibrated()) { Positions are approximate until all three alignment points are saved. } Double-click to zoom in; Shift + double-click to zoom out. Time offset shifts the map and storm relative to the match clock; positive values move map data forward. The visibility ring is estimated from when players enter recorded range.</p>
           }
         }
       }
@@ -271,7 +277,7 @@ export class LastMatchMap implements OnDestroy {
           sample[2] + Math.sin(yaw) * 1000);
         const angle = Math.atan2(directionV - v, directionU - u) * 180 / Math.PI + 90;
         result.push({ id: track.id, name: track.name, team: track.team, bot: track.bot, u, v, angle,
-          elevation: `${(sample[3] * METRES_PER_WORLD_UNIT).toFixed(1)}m` });
+          elevation: `${decimal(sample[3] * METRES_PER_WORLD_UNIT, 1)}m` });
       }
     }
     return result;
@@ -408,7 +414,8 @@ export class LastMatchMap implements OnDestroy {
     const image = event.target as HTMLImageElement;
     if (image.naturalWidth && image.naturalHeight) this.mapImageRatio.set(image.naturalWidth / image.naturalHeight);
   }
-  clock(seconds: number): string { return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`; }
+  readonly formatCount = count;
+  clock(seconds: number): string { return `${count(Math.floor(seconds / 60))}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`; }
   setTime(event: Event): void { this.time.set(Number((event.target as HTMLInputElement).value)); }
   setTimeOffset(event: Event): void {
     const value = Number((event.target as HTMLInputElement).value);
@@ -442,6 +449,7 @@ export class LastMatchMap implements OnDestroy {
     });
   }
   onMapDoubleClick(event: MouseEvent): void {
+    if (event.button !== 0) return;
     if ((event.target as HTMLElement).closest('.map-marker')) return;
     event.preventDefault();
     this.zoomAt(this.zoom() + (event.shiftKey ? -1 : 1), event.clientX, event.clientY);
@@ -486,7 +494,7 @@ export class LastMatchMap implements OnDestroy {
       const previous = this.lastRightDown;
       if (previous && performance.now() - previous.at < 450 &&
           Math.hypot(previous.x - event.clientX, previous.y - event.clientY) < 12) {
-        this.zoomAt(this.zoom() / 1.5, event.clientX, event.clientY);
+        this.zoomAt(this.zoom() - 1, event.clientX, event.clientY);
         this.lastRightDown = null;
       } else this.lastRightDown = { at: performance.now(), x: event.clientX, y: event.clientY };
       event.preventDefault();

@@ -60,7 +60,8 @@ function importReplay(db, replay, replayName, ownerIds = []) {
       teamIndex: finite(field(entry, 'TeamIndex', 'teamIndex'), -1),
       kills: Math.max(0, finite(field(entry, 'Kills', 'kills'))),
       placement: Math.max(0, finite(field(entry, 'Placement', 'placement'))),
-      owner: field(entry, 'IsReplayOwner', 'isReplayOwner') === true || field(entry, 'IsGameSessionOwner', 'isGameSessionOwner') === true,
+      // A game-session owner can be another player in a creative island.
+      owner: field(entry, 'IsReplayOwner', 'isReplayOwner') === true,
     });
   }
   const owner = [...players.values()].find(player => player.owner)?.id || 'null';

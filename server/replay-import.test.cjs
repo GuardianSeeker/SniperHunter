@@ -44,6 +44,7 @@ const unmarked = structuredClone(replay);
 unmarked.GameData.GameSessionId = 'unmarked-match';
 unmarked.Info.Timestamp = '2026-11-11T19:54:43Z';
 unmarked.PlayerData[0].IsReplayOwner = false;
+unmarked.PlayerData[0].IsGameSessionOwner = true;
 importReplay(db, unmarked, 'unmarked.replay', ['owner']);
 assert.equal(db.prepare("SELECT owner FROM GameStats WHERE gameID = 'unmarked-match'").get().owner, 'null');
 const missingSession = structuredClone(replay);
@@ -88,7 +89,7 @@ if (process.argv[2]) {
   const result = importReplay(db, actual, 'actual.replay');
   assert.equal(result.duplicate, false);
   assert.ok(result.players > 0 && result.eliminations > 0);
-  const replayOwner = actual.PlayerData.find(player => player.IsReplayOwner || player.IsGameSessionOwner)?.PlayerId || 'null';
+  const replayOwner = actual.PlayerData.find(player => player.IsReplayOwner)?.PlayerId || 'null';
   assert.equal(db.prepare('SELECT owner FROM GameStats WHERE gameID = ?').get(result.gameID).owner, replayOwner);
   const stats = db.prepare('SELECT bots, players, duration, distanceTravelled FROM GameStats WHERE gameID = ?').get(result.gameID);
   assert.equal(stats.duration, actual.Info.LengthInMs);
