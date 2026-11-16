@@ -1,0 +1,130 @@
+/* Final replay layout rules, including the bounded sniper list. */
+
+.feed-row {
+  display: grid;
+  grid-template-columns: 3.4rem minmax(0, 1fr) minmax(5rem, auto);
+  gap: 0.4rem;
+  align-items: center;
+  text-align: left;
+}
+
+.feed-row time {
+  flex: none;
+  text-align: left;
+}
+
+.feed-event {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 0;
+  text-align: center;
+}
+
+.feed-event .person-inline {
+  min-width: 0;
+}
+
+.feed-row > .weapon {
+  justify-self: end;
+  align-self: center;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 620px) {
+  .feed-row {
+    grid-template-columns: 2.6rem minmax(0, 1fr) minmax(4.5rem, auto);
+    align-items: center;
+  }
+
+  .feed-row time,
+  .feed-event {
+    grid-column: auto;
+  }
+
+  .feed-event {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+  }
+
+  .feed-row > .weapon {
+    grid-column: 3;
+    font-size: 0.72rem;
+  }
+}
+
+.team-table-scroll,
+.team-members {
+  overflow-anchor: none;
+}
+
+.team-table th:nth-child(2),
+.team-table td:nth-child(2) {
+  min-width: 22rem;
+}
+
+.team-table .team-member,
+.team-table .member-select {
+  max-width: none;
+}
+
+.team-table .member-name {
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .match-snipers-panel {
+    height: auto;
+    min-height: 0;
+    max-height: var(--match-info-height, 28rem);
+  }
+
+  .match-snipers-panel.empty-snipers {
+    max-height: none;
+  }
+
+  .match-snipers-panel .match-snipers {
+    flex: initial;
+  }
+}
+
+@media (max-width: 620px) {
+  .panel-grid,
+  .feed-team-grid {
+    gap: 0;
+  }
+
+  .panel-grid {
+    margin-bottom: 0;
+  }
+
+  .panel-grid > .panel,
+  .feed-team-grid > .panel,
+  .match-map-panel {
+    margin-bottom: 0.45rem;
+  }
+
+  .team-table {
+    min-width: 760px;
+  }
+
+  .suggested-owner-list,
+  .suggested-owner-list.single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .owner-profiles {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .owner-profile {
+    width: 100%;
+  }
+}

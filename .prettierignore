@@ -1,0 +1,10 @@
+node_modules/
+web/node_modules/
+web/.angular/
+web/dist/
+release/
+work/
+media/
+web/public/
+package-lock.json
+web/package-lock.json

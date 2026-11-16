@@ -4,10 +4,14 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "node scripts/dev.mjs",
-    "start": "node server/index.cjs --no-browser"
+    "start": "node server/index.cjs --no-browser",
+    "test": "node --test server/*.test.cjs",
+    "format": "prettier --write --ignore-unknown server scripts web/src",
+    "format:check": "prettier --check --ignore-unknown server scripts web/src"
   },
   "devDependencies": {
     "postject": "1.0.0-alpha.6",
+    "prettier": "3.10.1",
     "rcedit": "5.0.2"
   }
 }

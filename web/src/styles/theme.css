@@ -1,0 +1,175 @@
+/* Original Sniper Hunter palette and themed controls. */
+
+:root {
+  --bg-color: #18191a;
+  --bg-alternate: #2b2e3b;
+  --light-white: #f5f6f7;
+  --red-red: #8d021f;
+  color: var(--light-white);
+  background: var(--bg-color);
+}
+
+body {
+  background: var(--bg-color);
+  color: var(--light-white);
+}
+
+a {
+  color: var(--light-white);
+}
+
+.top-nav,
+.panel,
+.notice,
+.game-row,
+.player-card,
+.metric {
+  background: var(--bg-alternate);
+  color: var(--light-white);
+  border-color: #4d5060;
+}
+
+.top-nav {
+  box-shadow: 0 2px 10px #0006;
+}
+
+.top-nav a {
+  color: var(--light-white);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.top-nav a > span {
+  position: relative;
+  z-index: 1;
+}
+
+.top-nav a::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: var(--red-red);
+  clip-path: circle(0 at var(--hover-x, 50%) var(--hover-y, 50%));
+  transition: clip-path 0.28s ease-out;
+  pointer-events: none;
+}
+
+.top-nav a:hover::before,
+.top-nav a:focus-visible::before {
+  clip-path: circle(var(--hover-radius, 150%) at var(--hover-x, 50%) var(--hover-y, 50%));
+}
+
+.top-nav a:hover,
+.top-nav a:focus-visible {
+  background: transparent;
+  color: var(--light-white);
+  box-shadow: none;
+}
+
+.top-nav a.active {
+  background: var(--red-red);
+  color: var(--light-white);
+  box-shadow: none;
+}
+
+.muted,
+.detail-list dt,
+.field-label,
+.stat-grid span,
+.heading-count,
+.feed-row time {
+  color: #c5c8d0;
+}
+
+.detail-list div,
+.feed-list,
+.feed-row {
+  border-color: #4d5060;
+}
+
+.stat-grid div,
+.platform-list div {
+  border-color: #4d5060;
+}
+
+.game-row:hover,
+.game-row:focus-within,
+.player-card:hover,
+.player-card:focus-visible {
+  background: #383b4d;
+  border-color: #a72b45;
+}
+
+.game-primary strong {
+  color: var(--light-white);
+}
+
+.button-link,
+.picker-button {
+  background: var(--red-red);
+  color: var(--light-white);
+  border: 0;
+  cursor: pointer;
+}
+
+.button-link:hover,
+.picker-button:hover {
+  background: #a72b45;
+}
+
+.load-more,
+.secondary-button,
+.danger-button,
+.team-table th button {
+  background: var(--bg-alternate);
+  color: var(--light-white);
+  border: 1px solid #777b8a;
+  border-radius: 0.3rem;
+  cursor: pointer;
+}
+
+.load-more:hover,
+.secondary-button:hover,
+.team-table th button:hover {
+  background: #404354;
+}
+
+.danger-button {
+  border-color: #a72b45;
+  padding: 0.5rem 0.7rem;
+}
+
+.danger-button:hover {
+  background: var(--red-red);
+}
+
+.file-input,
+input[type='search'],
+select {
+  background: var(--bg-color);
+  border: 1px solid #777b8a;
+  color: var(--light-white);
+  border-radius: 0.3rem;
+  padding: 0.55rem;
+}
+
+.file-input::file-selector-button {
+  background: var(--bg-alternate);
+  border-color: #777b8a;
+  color: var(--light-white);
+}
+
+.notice.error {
+  border-color: #a72b45;
+  color: #ffb6c4;
+}
+
+.page {
+  max-width: 1580px;
+}
+
+.narrow-page {
+  max-width: 850px;
+}

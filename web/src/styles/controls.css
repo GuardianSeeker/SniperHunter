@@ -1,0 +1,147 @@
+/* Search toolbars, toggles and replay uploads. */
+
+.list-toolbar input[type='search'],
+.list-toolbar select {
+  min-height: 2.7rem;
+}
+
+.sort-direction {
+  height: 2.7rem;
+}
+
+.toolbar-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: end;
+  min-height: 2.7rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #777b8a;
+  border-radius: 0.3rem;
+  background: var(--bg-alternate);
+  color: var(--light-white);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.toolbar-action:hover {
+  background: #404354;
+}
+
+.list-toolbar .file-button {
+  min-height: 2.7rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.games-import-control {
+  margin-left: auto;
+  align-self: end;
+}
+
+.toggle-ai {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  align-self: end;
+  height: 2.7rem;
+  border: 1px solid #777b8a;
+  border-radius: 0.3rem;
+  padding: 0.4rem 0.65rem;
+  background: var(--bg-alternate);
+  color: var(--light-white);
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.toggle-ai.on {
+  background: var(--red-red);
+  border-color: #d34b68;
+}
+
+.toggle-check {
+  display: inline-flex;
+  width: 1.1rem;
+  height: 1.1rem;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid #c5c8d0;
+  border-radius: 0.2rem;
+  background: var(--bg-color);
+  font-size: 0.8rem;
+}
+
+.toggle-ai.on .toggle-check {
+  background: var(--light-white);
+  color: var(--red-red);
+}
+
+.metric strong small {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #c5c8d0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  width: 100%;
+  min-height: 15rem;
+  padding: 2rem;
+  border: 2px dashed #777b8a;
+  border-radius: 0.6rem;
+  background: #18191a;
+  color: var(--light-white);
+  font: inherit;
+  text-align: center;
+  appearance: none;
+}
+
+.drop-zone:hover,
+.drop-zone.dragging,
+.visually-hidden:focus-visible + .drop-zone {
+  border-color: #d34b68;
+  background: #40242e;
+}
+
+.drop-zone:disabled {
+  opacity: 0.6;
+}
+
+.drop-icon {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.replay-errors {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.replay-errors li {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid #4d5060;
+}
+
+.replay-errors li span {
+  color: #ffb6c4;
+  overflow-wrap: anywhere;
+}

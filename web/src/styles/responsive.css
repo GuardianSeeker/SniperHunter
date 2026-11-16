@@ -1,0 +1,206 @@
+/* Shared mobile layout adjustments. */
+
+@media (max-width: 620px) {
+  .top-nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .top-nav a {
+    min-width: 0;
+    padding: 0.52rem 0.25rem;
+    font-size: 0.86rem;
+    white-space: normal;
+  }
+
+  .top-nav a:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .page {
+    padding: 0.8rem 0.65rem 3.6rem;
+  }
+
+  .page-heading {
+    margin-bottom: 0.7rem;
+    gap: 0.35rem;
+  }
+
+  .page-heading .muted {
+    font-size: 0.85rem;
+  }
+
+  h1 {
+    font-size: 1.45rem;
+  }
+
+  h2 {
+    margin-bottom: 0.6rem;
+  }
+
+  .panel {
+    padding: 0.75rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .panel-grid {
+    gap: 0.65rem;
+  }
+
+  .detail-list div {
+    grid-template-columns: 6.6rem minmax(0, 1fr);
+    gap: 0.4rem;
+    padding: 0.4rem 0;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+
+  .panel-grid {
+    align-items: start;
+  }
+
+  .match-stats-panel .stat-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stat-grid div {
+    padding: 0.5rem;
+  }
+
+  .platform-list div {
+    flex: 1 1 9rem;
+    min-width: 0;
+  }
+
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .player-metrics {
+    display: flex;
+  }
+
+  .metric,
+  .platform-metric {
+    min-width: 0;
+    padding: 0.5rem;
+  }
+
+  .metric strong {
+    font-size: 1.05rem;
+    overflow-wrap: anywhere;
+  }
+
+  .list-toolbar {
+    gap: 0.5rem;
+  }
+
+  .list-toolbar label:has(input[type='search']) {
+    flex: 1 1 100%;
+  }
+
+  .list-toolbar input[type='search'] {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .list-toolbar label:has(input[type='date']) {
+    flex: 1 1 8rem;
+    min-width: 0;
+  }
+
+  .list-toolbar input[type='date'] {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .game-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    padding: 0.65rem;
+  }
+
+  .game-row .game-primary,
+  .game-row .game-id {
+    grid-column: 1 / -1;
+  }
+
+  .game-row .danger-button {
+    grid-column: 1 / -1;
+  }
+
+  .feed-row {
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .feed-row time {
+    flex-basis: 100%;
+  }
+
+  .feed-event {
+    justify-content: flex-start;
+  }
+
+  .team-table {
+    min-width: 540px;
+  }
+
+  .player-wall {
+    grid-template-columns: 1fr;
+  }
+
+  .player-card img {
+    width: 48px;
+    height: 48px;
+  }
+
+  .player-profile {
+    flex-wrap: wrap;
+  }
+
+  .player-page .game-list {
+    display: block;
+    overflow-x: visible;
+  }
+
+  .player-game-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+    margin-bottom: 0.45rem;
+  }
+
+  .sql-save-group {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .sql-save-group input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .status-bar {
+    padding: 0.35rem 3.5rem;
+  }
+
+  .shutdown-button {
+    right: 0.55rem;
+  }
+
+  .console-output {
+    height: 15rem;
+  }
+}
+
+@media (max-width: 350px) {
+  .top-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

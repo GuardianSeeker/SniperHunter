@@ -1,0 +1,80 @@
+/* Narrow replay and map controls. */
+
+@media (max-width: 760px) {
+  .map-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 620px) {
+  .feed-team-grid,
+  .feed-team-grid > *,
+  .feed-list,
+  .feed-event {
+    min-width: 0;
+  }
+
+  .feed-team-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .feed-panel,
+  .team-panel {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .team-table-scroll {
+    max-width: 100%;
+  }
+
+  .feed-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+
+  .feed-filters label {
+    min-width: 0;
+  }
+
+  .feed-row {
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    gap: 0.3rem;
+    padding: 0.35rem 0.1rem;
+    text-align: left;
+    font-size: 0.82rem;
+  }
+
+  .feed-row time {
+    grid-column: 1;
+    flex-basis: auto;
+    align-self: center;
+    font-size: 0.74rem;
+    text-align: left;
+  }
+
+  .feed-event {
+    grid-column: 2;
+    justify-content: flex-start;
+    gap: 0.1rem 0.25rem;
+    line-height: 1.15;
+  }
+
+  .feed-event > span {
+    font-size: 0.76rem;
+  }
+
+  .person-inline img {
+    width: 21px;
+    height: 21px;
+  }
+
+  button.person-inline {
+    padding: 0;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 0.82rem;
+  }
+}

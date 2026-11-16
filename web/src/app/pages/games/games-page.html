@@ -1,0 +1,220 @@
+<main class="page">
+    <div class="page-heading">
+        <div>
+            <h1>Recent games</h1>
+            <p class="muted">Search and review saved matches.</p>
+        </div>
+    </div>
+    @if (metrics(); as stats) {
+        <div class="metrics-row">
+            <div class="metric" [class.selected]="kind() === ''">
+                <button
+                    type="button"
+                    class="metric-filter"
+                    (click)="setKind('')"
+                    [attr.aria-pressed]="kind() === ''"
+                >
+                    <span>Games played</span>
+                    <strong>{{ formatCount(stats.games) }}</strong>
+                </button>
+            </div>
+            <div class="metric" [class.selected]="kind() === 'noncreative'">
+                <button
+                    type="button"
+                    class="metric-filter"
+                    (click)="setKind('noncreative')"
+                    [attr.aria-pressed]="kind() === 'noncreative'"
+                >
+                    <span>Non-creative games</span>
+                    <strong>
+                        {{ formatCount(stats.nonCreativeGames) }}
+                        <small>({{ formatDecimal(stats.nonCreativePercent, 1) }}%)</small>
+                    </strong>
+                </button>
+            </div>
+            <div class="metric" [class.selected]="kind() === 'creative'">
+                <button
+                    type="button"
+                    class="metric-filter"
+                    (click)="setKind('creative')"
+                    [attr.aria-pressed]="kind() === 'creative'"
+                >
+                    <span>Creative games</span>
+                    <strong>
+                        {{ formatCount(stats.creativeGames) }}
+                        <small>({{ formatDecimal(stats.creativePercent, 1) }}%)</small>
+                    </strong>
+                </button>
+            </div>
+            <div class="metric" [class.selected]="kind() === 'won'">
+                <button
+                    type="button"
+                    class="metric-filter"
+                    (click)="setKind('won')"
+                    [attr.aria-pressed]="kind() === 'won'"
+                >
+                    <span>Games won</span>
+                    <strong>
+                        {{ formatCount(stats.gamesWon) }}
+                        <small>({{ formatDecimal(stats.winPercent, 1) }}%)</small>
+                    </strong>
+                </button>
+            </div>
+            <div class="metric">
+                <span>Average placement</span>
+                <strong>
+                    {{ stats.averagePlacement === null ? '—' : formatDecimal(stats.averagePlacement, 2) }}
+                </strong>
+            </div>
+            <div class="metric">
+                <span>Total kills</span>
+                <strong>
+                    {{ formatCount(stats.totalKills) }}
+                    <small>(KD {{ stats.kd === null ? '—' : formatDecimal(stats.kd, 2) }})</small>
+                </strong>
+            </div>
+            <div class="metric">
+                <span>Real players</span>
+                <strong>{{ formatDecimal(stats.realPercent, 1) }}%</strong>
+            </div>
+            <div class="metric">
+                <span>Time played</span>
+                <strong>
+                    {{ formatCount(timeHours(stats.timePlayed)) }}
+                    <small>hrs</small>
+                    {{ timeMinutes(stats.timePlayed) }}
+                    <small>mins</small>
+                </strong>
+            </div>
+            <div class="metric">
+                <span>Distance travelled</span>
+                <strong>{{ formatDistance(stats.distanceTravelled) }}</strong>
+            </div>
+        </div>
+    }
+    <div class="list-toolbar">
+        <label>
+            Search games
+            <input
+                type="search"
+                [value]="query()"
+                (input)="search($event)"
+                placeholder="Replay, mode, ID"
+            />
+        </label>
+        <label>
+            Placement
+            <input
+                class="placement-filter"
+                type="number"
+                min="0"
+                max="99999"
+                step="1"
+                [value]="placementFilter()"
+                (input)="changePlacement($event)"
+                placeholder="Exact #"
+            />
+        </label>
+        <button
+            type="button"
+            class="secondary-button sort-direction"
+            (click)="reverse()"
+            [attr.aria-label]="direction() === 'desc' ? 'Sort oldest first' : 'Sort newest first'"
+            [title]="direction() === 'desc' ? 'Newest first' : 'Oldest first'"
+        >
+            {{ direction() === 'desc' ? '↓' : '↑' }}
+        </button>
+        <label>
+            After
+            <input
+                type="date"
+                [value]="after()"
+                [max]="before() || null"
+                (change)="changeDate($event, 'after')"
+            />
+        </label>
+        <label>
+            Before
+            <input
+                type="date"
+                [value]="before()"
+                [min]="after() || null"
+                (change)="changeDate($event, 'before')"
+            />
+        </label>
+        @if (after() || before()) {
+            <button type="button" class="toolbar-action" (click)="clearDates()">Clear dates</button>
+        }
+        @if (!access.readOnly()) {
+            <label class="file-button games-import-control">
+                Import old database.db
+                <input
+                    type="file"
+                    accept=".db"
+                    (change)="importOldDatabase($event)"
+                    [disabled]="importing()"
+                />
+            </label>
+        }
+    </div>
+    @if (importMessage()) {
+        <p class="notice" role="status">{{ importMessage() }}</p>
+    }
+    @if (!loading()) {
+        @if (error()) {
+            <div class="notice error" role="alert">{{ error() }}</div>
+        } @else if (games().length) {
+            <div class="game-list">
+                @for (game of games(); track game.gameID) {
+                    <div
+                        class="game-row clickable-game"
+                        role="link"
+                        tabindex="0"
+                        [attr.aria-label]="'Open ' + game.replayName"
+                        (click)="openGame(game)"
+                        (keydown.enter)="openGameFromKey($event, game)"
+                    >
+                        <div class="game-primary">
+                            <strong>{{ game.replayName }}</strong>
+                            <span class="muted">{{ formatDate(game.timestamp) }}</span>
+                        </div>
+                        <div>
+                            <span class="field-label">Mode</span>
+                            <span>{{ game.mode }}</span>
+                        </div>
+                        <div>
+                            <span class="field-label">Placement</span>
+                            <strong>{{ formatPlacement(game.placement) }}</strong>
+                        </div>
+                        <div class="game-id">
+                            <span class="field-label">Session ID</span>
+                            <code>{{ game.gameID }}</code>
+                        </div>
+                        @if (!access.readOnly()) {
+                            <button
+                                type="button"
+                                class="danger-button"
+                                (click)="$event.stopPropagation(); deleteGame(game)"
+                            >
+                                Delete
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+            @if (games().length < total() && !loadingMore()) {
+                <button type="button" class="load-more" (click)="loadMore()">
+                    Load more games
+                </button>
+            }
+        } @else {
+            <div class="notice">
+                <h2>No games found</h2>
+                <p>Try another search.</p>
+                @if (!access.readOnly()) {
+                    <a class="button-link" routerLink="/replay">Add a replay</a>
+                }
+            </div>
+        }
+    }
+</main>

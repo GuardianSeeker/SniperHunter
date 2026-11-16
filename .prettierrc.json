@@ -1,0 +1,9 @@
+{
+  "singleQuote": true,
+  "printWidth": 100,
+  "htmlWhitespaceSensitivity": "ignore",
+  "embeddedLanguageFormatting": "off",
+  "overrides": [
+    { "files": "web/src/app/**/*.html", "options": { "parser": "angular", "tabWidth": 4 } }
+  ]
+}

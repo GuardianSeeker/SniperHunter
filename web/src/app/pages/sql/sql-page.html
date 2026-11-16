@@ -1,0 +1,140 @@
+<main class="page sql-page">
+    <h1>Custom SQL</h1>
+    <p class="muted">
+        Run a statement against your local Sniper Hunter database. Changes take effect immediately.
+    </p>
+    <details class="schema-browser collapsible" (toggle)="openSchema($event)">
+        <summary>
+            Database tables
+            @if (schemaLoaded()) {
+                <span class="muted">({{ formatCount(tables().length) }})</span>
+            }
+        </summary>
+        <div class="schema-overview">
+            <p>
+                <strong>GameStats</strong>
+                — replay details and your match statistics.
+            </p>
+            <p>
+                <strong>GamePlayers</strong>
+                — players, teams, placements, and kills in each match.
+            </p>
+            <p>
+                <strong>GameEliminations</strong>
+                — elimination times, players, and weapons.
+            </p>
+            <p>
+                <strong>Players</strong>
+                — known player IDs, names, platforms, and skins.
+            </p>
+        </div>
+        @if (schemaLoading()) {
+            <p class="muted schema-loading">Loading table structure…</p>
+        }
+        <div class="schema-grid">
+            @for (table of tables(); track table.name) {
+                <details class="schema-table collapsible">
+                    <summary>
+                        <strong>{{ table.name }}</strong>
+                        <span class="muted">{{ formatCount(table.rows) }} rows</span>
+                    </summary>
+                    <ul>
+                        @for (column of table.columns; track column.name) {
+                            <li>
+                                <code>{{ column.name }}</code>
+                                <span>{{ typeLabel(column.type) }}</span>
+                                @if (column.primaryKey) {
+                                    <small>Primary key</small>
+                                }
+                            </li>
+                        }
+                    </ul>
+                </details>
+            }
+        </div>
+    </details>
+    <label for="sql-input">SQL statement</label>
+    <textarea
+        id="sql-input"
+        spellcheck="false"
+        [value]="sql()"
+        (input)="sql.set($any($event.target).value)"
+        placeholder="DO NOT COPY PASTE CODE GIVEN TO YOU BY OTHERS BLINDLY HERE"
+    ></textarea>
+    <div class="sql-actions">
+        <button type="button" class="sql-run" (click)="run()" [disabled]="running()">
+            {{ running() ? 'Running…' : 'Run SQL' }}
+        </button>
+        <div class="sql-save-group">
+            <input
+                type="text"
+                aria-label="Saved query name"
+                placeholder="Query name"
+                [value]="name()"
+                (input)="name.set($any($event.target).value)"
+            />
+            <button type="button" class="toolbar-action" (click)="save()">Save query</button>
+        </div>
+    </div>
+    @if (saved().length) {
+        <section class="saved-queries">
+            <h2>Saved queries</h2>
+            <div class="saved-query-list">
+                @for (item of saved(); track item.id) {
+                    <span class="saved-query">
+                        <button type="button" (click)="use(item)">{{ item.name }}</button>
+                        <button
+                            type="button"
+                            class="saved-delete"
+                            [attr.aria-label]="'Delete ' + item.name"
+                            (click)="remove(item)"
+                        >
+                            ×
+                        </button>
+                    </span>
+                }
+            </div>
+        </section>
+    }
+    @if (error()) {
+        <p class="notice error" role="alert">{{ error() }}</p>
+    }
+    @if (result(); as data) {
+        <section class="panel sql-results">
+            <div class="sql-result-head">
+                <h2>Output</h2>
+                <span class="muted">{{ data.message }}</span>
+                @if (data.columns.length) {
+                    <button type="button" class="toolbar-action" (click)="copyCsv()">
+                        Copy CSV
+                    </button>
+                    <button type="button" class="toolbar-action" (click)="exportCsv()">
+                        Export CSV
+                    </button>
+                }
+            </div>
+            @if (data.columns.length) {
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                @for (column of data.columns; track column) {
+                                    <th>{{ column }}</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (row of data.rows; track $index) {
+                                <tr>
+                                    @for (column of data.columns; track column) {
+                                        <td>{{ display(row[column]) }}</td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
+</main>

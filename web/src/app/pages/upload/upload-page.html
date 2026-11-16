@@ -1,0 +1,52 @@
+<main class="page narrow-page">
+    <div class="page-heading">
+        <div>
+            <h1>Add replay</h1>
+            <p class="muted">
+                Drop replay files here or click to browse. Files are read one at a time.
+            </p>
+        </div>
+    </div>
+    <section class="panel upload-panel">
+        <input
+            #fileInput
+            id="replay-file"
+            class="visually-hidden"
+            type="file"
+            accept=".replay"
+            multiple
+            (change)="choose($event)"
+            [disabled]="busy()"
+        />
+        <button
+            type="button"
+            class="drop-zone"
+            [class.dragging]="dragging()"
+            [disabled]="busy()"
+            (click)="browse()"
+            (dragover)="dragOver($event)"
+            (dragleave)="dragging.set(false)"
+            (drop)="drop($event)"
+        >
+            <span class="drop-icon" aria-hidden="true">＋</span>
+            <strong>Drop .replay files here</strong>
+            <span>or click to select files</span>
+        </button>
+        @if (message()) {
+            <p class="message" role="status">{{ message() }}</p>
+        }
+    </section>
+    @if (errors().length) {
+        <section class="panel" aria-labelledby="replay-errors">
+            <h2 id="replay-errors">Errors</h2>
+            <ul class="replay-errors">
+                @for (item of errors(); track item.name + item.message) {
+                    <li>
+                        <strong>{{ item.name }}</strong>
+                        <span>{{ item.message }}</span>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+</main>

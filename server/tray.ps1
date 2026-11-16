@@ -1,7 +1,10 @@
+# Hidden Windows tray host. The Node process supplies the embedded icon and app URL;
+# writing CLOSE to stdout asks that process to perform its normal shutdown sequence.
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 $tray = New-Object System.Windows.Forms.NotifyIcon
+# Keep the icon stream alive for the lifetime of the NotifyIcon.
 $iconBytes = [Convert]::FromBase64String($env:SNIPER_HUNTER_TRAY_ICON_B64)
 $iconStream = [System.IO.MemoryStream]::new($iconBytes)
 $trayIcon = [System.Drawing.Icon]::new($iconStream)
@@ -20,5 +23,12 @@ $close.add_Click({
 })
 $tray.ContextMenuStrip = $menu
 $tray.Visible = $true
-try { [System.Windows.Forms.Application]::Run() }
-finally { $tray.Visible = $false; $tray.Dispose(); $trayIcon.Dispose(); $iconStream.Dispose(); $menu.Dispose() }
+try {
+  [System.Windows.Forms.Application]::Run()
+} finally {
+  $tray.Visible = $false
+  $tray.Dispose()
+  $trayIcon.Dispose()
+  $iconStream.Dispose()
+  $menu.Dispose()
+}

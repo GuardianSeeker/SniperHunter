@@ -1,34 +1,158 @@
 <nav class="top-nav" aria-label="Main navigation">
-  <a routerLink="/lastmatch" routerLinkActive="active" (pointerenter)="setNavHoverOrigin($event)"><span>Last match</span></a>
-  <a routerLink="/games" routerLinkActive="active" (pointerenter)="setNavHoverOrigin($event)"><span>Recent games</span></a>
-  <a routerLink="/snipers" routerLinkActive="active" (pointerenter)="setNavHoverOrigin($event)"><span>Snipers list</span></a>
-  @if (!access.readOnly()) {
-    <a routerLink="/replay" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (pointerenter)="setNavHoverOrigin($event)"><span>Add replay</span></a>
-    <a routerLink="/sql" routerLinkActive="active" (pointerenter)="setNavHoverOrigin($event)"><span>Custom SQL</span></a>
-    <a routerLink="/settings" routerLinkActive="active" (pointerenter)="setNavHoverOrigin($event)"><span>Settings</span></a>
-  }
-  <a routerLink="/about" routerLinkActive="active" (pointerenter)="setNavHoverOrigin($event)"><span>About</span></a>
+    <a routerLink="/lastmatch" routerLinkActive="active" (pointerenter)="setNavHoverOrigin($event)">
+        <span>Last match</span>
+    </a>
+    <a routerLink="/games" routerLinkActive="active" (pointerenter)="setNavHoverOrigin($event)">
+        <span>Recent games</span>
+    </a>
+    <a routerLink="/snipers" routerLinkActive="active" (pointerenter)="setNavHoverOrigin($event)">
+        <span>Snipers list</span>
+    </a>
+    @if (!access.readOnly()) {
+        <a
+            routerLink="/replay"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            (pointerenter)="setNavHoverOrigin($event)"
+        >
+            <span>Add replay</span>
+        </a>
+        <a routerLink="/sql" routerLinkActive="active" (pointerenter)="setNavHoverOrigin($event)">
+            <span>Custom SQL</span>
+        </a>
+        <a
+            routerLink="/settings"
+            routerLinkActive="active"
+            (pointerenter)="setNavHoverOrigin($event)"
+        >
+            <span>Settings</span>
+        </a>
+    }
+    <a routerLink="/about" routerLinkActive="active" (pointerenter)="setNavHoverOrigin($event)">
+        <span>About</span>
+    </a>
 </nav>
 <router-outlet />
-@if (showBackToTop()) { <button type="button" class="back-to-top" [class.back-to-top-right]="backToTopSide() === 'right'" (click)="scrollToTop()" aria-label="Back to top" title="Back to top">↑</button> }
-<footer class="status-bar" [class.status-idle]="status().kind === 'idle' || status().kind === 'added' || status().kind === 'warning'" [class.status-manual]="manualPulse()" (click)="pulseStatus()" role="status" aria-live="polite">
-  <div class="status-fill" [style.width.%]="status().progress"></div>
-  <span class="status-message">{{ status().kind === 'batch' ? 'Replay queue · ' : '' }}{{ status().message || 'Sniper Hunter is ready' }}</span>
-  <span class="status-ripple"></span><span class="status-logo-wrap"><img src="/assets/icon.ico" alt="Sniper Hunter" /></span>
-  @if (!access.readOnly()) { <button type="button" class="shutdown-button" (click)="shutdown($event)" aria-label="Shut down Sniper Hunter" title="Shut down Sniper Hunter"><img src="/assets/power.svg" alt="" /></button> }
+@if (showBackToTop()) {
+    <button
+        type="button"
+        class="back-to-top"
+        [class.back-to-top-right]="backToTopSide() === 'right'"
+        (click)="scrollToTop()"
+        aria-label="Back to top"
+        title="Back to top"
+    >
+        ↑
+    </button>
+}
+<footer
+    class="status-bar"
+    [class.status-idle]="displayStatus().kind === 'idle' || displayStatus().kind === 'added' || displayStatus().kind === 'warning'"
+    [class.status-manual]="manualPulse()"
+    (click)="pulseStatus()"
+    role="status"
+    aria-live="polite"
+>
+    <div class="status-fill" [style.width.%]="displayStatus().progress"></div>
+    <span class="status-message">
+        {{ displayStatus().kind === 'batch' ? 'Replay queue · ' : ''
+        }}{{ displayStatus().message || 'Sniper Hunter is ready' }}
+    </span>
+    <span class="status-ripple"></span>
+    <span class="status-logo-wrap"><img src="/assets/icon.ico" alt="Sniper Hunter" /></span>
+    @if (!access.readOnly()) {
+        <button
+            type="button"
+            class="shutdown-button"
+            (click)="shutdown($event)"
+            aria-label="Shut down Sniper Hunter"
+            title="Shut down Sniper Hunter"
+        >
+            <img src="/assets/power.svg" alt="" />
+        </button>
+    }
 </footer>
 @if (showSplash()) {
-  <div class="splash-screen" role="status" aria-label="Loading Sniper Hunter"><div class="splash-emblem"><div class="lds-dual-ring"></div><img src="/assets/icon.ico" alt="" /></div></div>
+    <div class="splash-screen" role="status" aria-label="Loading Sniper Hunter">
+        <div class="splash-emblem">
+            <div class="lds-dual-ring"></div>
+            <img src="/assets/icon.ico" alt="" />
+        </div>
+    </div>
 }
 @if (!access.readOnly() && update(); as latest) {
-  <div class="modal-backdrop"><section class="update-modal panel" role="dialog" aria-modal="true" aria-labelledby="update-title">
-    <h2 id="update-title">Sniper Hunter {{ latest.version }} is available</h2>
-    <p>A newer release is ready to download from GitHub.</p>
-    @if (updateError()) { <p class="notice error" role="alert">{{ updateError() }}</p> }
-    <div class="update-actions">
-      <a class="button-link" [href]="latest.url" target="_blank" rel="noopener noreferrer" (click)="ignoreUpdate()">Open latest release ↗</a>
-      <button type="button" class="toolbar-action" (click)="ignoreUpdate()">Ignore</button>
-      <button type="button" class="toolbar-action" (click)="dismissUpdate()">Dismiss this version</button>
+    <div class="modal-backdrop">
+        <section
+            class="update-modal panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="update-title"
+        >
+            <div class="update-heading">
+                <span class="update-eyebrow">Update available</span>
+                <button
+                    type="button"
+                    class="update-close"
+                    (click)="closeUpdate()"
+                    [disabled]="updateInstalling()"
+                    aria-label="Close update notice"
+                >
+                    <span class="map-button-glyph">×</span>
+                </button>
+            </div>
+            <h2 id="update-title">Sniper Hunter {{ latest.version }}</h2>
+            <p class="update-version">Your version: {{ currentVersion() }}</p>
+            <div class="update-notes">
+                <h3>Release notes</h3>
+                <div class="update-notes-text">
+                    {{ latest.notes || 'No release notes were provided.' }}
+                </div>
+            </div>
+            @if (!latest.asset) {
+                <p class="update-asset-warning">
+                    SniperHunter-{{ latest.version }}.zip is not attached to this release. You can
+                    still open it on GitHub.
+                </p>
+            }
+            @if (updateError()) {
+                <p class="notice error" role="alert">{{ updateError() }}</p>
+            }
+            <div class="update-actions">
+                <button
+                    type="button"
+                    class="update-primary"
+                    (click)="installUpdate()"
+                    [disabled]="!latest.asset || updateInstalling()"
+                >
+                    Update
+                </button>
+                <a
+                    class="update-secondary"
+                    [href]="latest.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    Go to GitHub ↗
+                </a>
+                <button
+                    type="button"
+                    class="update-secondary"
+                    (click)="ignoreUpdate()"
+                    [disabled]="updateInstalling()"
+                    title="Hide this notice for this browser session"
+                >
+                    Ignore
+                </button>
+                <button
+                    type="button"
+                    class="update-secondary"
+                    (click)="dismissUpdate()"
+                    [disabled]="updateInstalling()"
+                    title="Do not prompt again for this version"
+                >
+                    Skip version
+                </button>
+            </div>
+        </section>
     </div>
-  </section></div>
 }

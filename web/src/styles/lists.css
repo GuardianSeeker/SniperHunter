@@ -1,0 +1,373 @@
+/* Player cards, game lists, platform filters and shared table primitives. */
+
+.feed-team-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.feed-row {
+  display: flex;
+  gap: 0.7rem;
+}
+
+.feed-row time {
+  flex: 0 0 3.3rem;
+}
+
+.feed-event {
+  gap: 0.3rem 0.45rem;
+}
+
+.person-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.person-inline img,
+.team-member img,
+.player-card img,
+.player-profile img {
+  border-radius: 50%;
+  object-fit: contain;
+  background: transparent;
+  flex: none;
+}
+
+.person-inline img {
+  width: 28px;
+  height: 28px;
+}
+
+.weapon {
+  font-size: 0.85rem;
+}
+
+.team-table-scroll {
+  overflow-x: auto;
+}
+
+.team-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 480px;
+}
+
+.team-table th,
+.team-table td {
+  border-bottom: 1px solid #4d5060;
+  padding: 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.team-table th button {
+  padding: 0.25rem 0.4rem;
+  white-space: nowrap;
+}
+
+.team-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+.team-member {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid #4d5060;
+  border-radius: 0.35rem;
+  padding: 0.2rem 0.35rem;
+  text-decoration: none;
+  max-width: 100%;
+}
+
+.team-member:hover {
+  background: #404354;
+}
+
+.team-member img {
+  width: 30px;
+  height: 30px;
+}
+
+.member-name {
+  overflow-wrap: anywhere;
+}
+
+.member-kills {
+  color: #c5c8d0;
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+.metrics-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.metric {
+  border: 1px solid #4d5060;
+  border-radius: 0.4rem;
+  padding: 0.65rem 0.9rem;
+  min-width: 10rem;
+}
+
+.metric span {
+  display: block;
+  color: #c5c8d0;
+  font-size: 0.85rem;
+}
+
+.metric strong {
+  font-size: 1.25rem;
+}
+
+.list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.7rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.list-toolbar label {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.list-toolbar input[type='search'] {
+  min-width: min(22rem, 90vw);
+}
+
+.file-button {
+  position: relative;
+  border: 1px solid #777b8a;
+  border-radius: 0.3rem;
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+}
+
+.file-button input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.game-row {
+  grid-template-columns: minmax(13rem, 2fr) minmax(10rem, 1.2fr) 6.5rem minmax(12rem, 1.5fr) auto;
+}
+
+.player-wall {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr));
+  gap: 0.65rem;
+}
+
+.player-card {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 0.7rem;
+  border: 1px solid #4d5060;
+  border-radius: 0.4rem;
+  text-decoration: none;
+}
+
+.player-card img {
+  width: 58px;
+  height: 58px;
+}
+
+.player-card div {
+  min-width: 0;
+}
+
+.player-card strong,
+.player-card small,
+.player-card span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.player-card small,
+.player-card span {
+  color: #c5c8d0;
+  font-size: 0.8rem;
+}
+
+.player-profile {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.player-profile img {
+  width: 96px;
+  height: 96px;
+}
+
+.loading-note {
+  margin-top: 1rem;
+}
+
+@media (max-width: 1050px) {
+  .feed-team-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .game-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .game-row .danger-button {
+    justify-self: start;
+  }
+}
+
+input[type='date'] {
+  color-scheme: dark;
+  background: var(--bg-color);
+  color: var(--light-white);
+  border: 1px solid #777b8a;
+  border-radius: 0.3rem;
+  padding: 0.5rem 0.55rem;
+  min-height: 2.35rem;
+}
+
+input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+.list-toolbar input[type='date'] {
+  min-width: 10rem;
+}
+
+.list-toolbar .check-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.4rem;
+  cursor: pointer;
+}
+
+.check-control input {
+  accent-color: var(--red-red);
+  width: 1rem;
+  height: 1rem;
+}
+
+.sort-direction {
+  align-self: end;
+  width: 2.5rem;
+  height: 2.4rem;
+  padding: 0;
+  font-size: 1.45rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.platform-metric {
+  min-width: 11rem;
+}
+
+.platform-metric.selected,
+.variant-list button.selected {
+  border-color: #d34b68;
+  box-shadow: inset 0 0 0 1px #d34b68;
+}
+
+.metric-filter {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.metric-filter:hover span,
+.metric-filter:focus-visible span {
+  text-decoration: underline;
+}
+
+.metric-filter strong {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.metric-filter small {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #c5c8d0;
+}
+
+.variant-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.4rem;
+}
+
+.variant-list button {
+  background: #18191a;
+  color: var(--light-white);
+  border: 1px solid #777b8a;
+  border-radius: 0.25rem;
+  padding: 0.15rem 0.35rem;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.variant-list button:hover {
+  border-color: #d34b68;
+}
+
+.player-metrics {
+  align-items: stretch;
+  gap: 0.45rem;
+}
+
+.player-metrics .metric {
+  position: relative;
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0.5rem 0.65rem;
+}
+
+.player-metrics .metric-filter::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.player-metrics .metric:has(.metric-filter:focus-visible) {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.player-metrics .variant-list {
+  position: relative;
+  z-index: 1;
+}

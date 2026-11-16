@@ -1,0 +1,55 @@
+/* Consistent summary treatment for expandable sections. */
+
+/* One summary treatment for every expandable section, including nested schema tables. */
+
+.collapsible > summary {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+  list-style: none;
+  font-size: 1.12rem;
+  font-weight: 700;
+  cursor: var(--cursor-click);
+}
+
+.collapsible > summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsible > summary::marker {
+  content: '';
+}
+
+.collapsible > summary::before {
+  content: '▾';
+  flex: none;
+  color: #d55b75;
+}
+
+.collapsible:not([open]) > summary {
+  margin-bottom: 0;
+}
+
+.collapsible:not([open]) > summary::before {
+  content: '▸';
+}
+
+.collapsible > summary .heading-count,
+.schema-table > summary .muted {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 360px) {
+  .feed-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .panel-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

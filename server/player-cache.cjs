@@ -1,7 +1,13 @@
 'use strict';
 
+/**
+ * Rebuild derived player counts and search indexes transactionally when source table counts change.
+ * @param db Open SQLite connection; source rows remain authoritative.
+ * @returns Nothing; updates cache metadata only after a successful rebuild.
+ */
 function rebuildPlayerCounts(db) {
-  const missingPlatform = "(p.platform IS NULL OR TRIM(p.platform) = '' OR UPPER(TRIM(p.platform)) = 'NULL')";
+  const missingPlatform =
+    "(p.platform IS NULL OR TRIM(p.platform) = '' OR UPPER(TRIM(p.platform)) = 'NULL')";
   const hasSkin = "(p.skin IS NOT NULL AND TRIM(p.skin) <> '')";
   db.exec('BEGIN IMMEDIATE');
   try {
@@ -33,7 +39,10 @@ function rebuildPlayerCounts(db) {
         VALUES ('sourceRows', (SELECT COUNT(*) FROM GamePlayers)),
           ('sourcePlayers', (SELECT COUNT(*) FROM Players));`);
     db.exec('COMMIT');
-  } catch (error) { db.exec('ROLLBACK'); throw error; }
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
 }
 
 module.exports = { rebuildPlayerCounts };

@@ -1,0 +1,150 @@
+<main class="page">
+    <div class="page-heading">
+        <div>
+            <h1>Snipers list</h1>
+            <p class="muted">People who have appeared in your games.</p>
+        </div>
+    </div>
+    @if (metrics(); as stats) {
+        <div class="metrics-row player-metrics">
+            <div class="metric" [class.selected]="!platform()">
+                <button
+                    type="button"
+                    class="metric-filter"
+                    (click)="clearPlatform()"
+                    [attr.aria-pressed]="!platform()"
+                >
+                    <span>Total players</span>
+                    <strong>{{ formatCount(stats.total) }}</strong>
+                </button>
+            </div>
+            @for (item of stats.platforms; track item.key) {
+                <div class="metric platform-metric" [class.selected]="platform() === item.key">
+                    <button
+                        type="button"
+                        class="metric-filter"
+                        (click)="filterPlatform(item.key)"
+                        [attr.aria-pressed]="platform() === item.key"
+                    >
+                        <span class="platform-metric-label">
+                            {{ item.label }}
+                            @if (platformIcon(item.key); as icon) {
+                                <img
+                                    class="platform-icon platform-icon-invert"
+                                    [src]="icon"
+                                    alt=""
+                                />
+                            }
+                        </span>
+                        <strong>
+                            {{ formatCount(item.players) }}
+                            <small>{{ formatDecimal(item.percent, 1) }}%</small>
+                        </strong>
+                    </button>
+                    @if (item.variants.length > 1) {
+                        <div class="variant-list">
+                            @for (variant of item.variants; track variant.code) {
+                                <button
+                                    type="button"
+                                    [class.selected]="platform() === variant.code"
+                                    (click)="filterPlatform(variant.code)"
+                                    [attr.aria-pressed]="platform() === variant.code"
+                                >
+                                    {{ variant.code }} {{ formatCount(variant.players) }}
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+    <div class="list-toolbar">
+        <label>
+            Search players
+            <input
+                type="search"
+                [value]="query()"
+                (input)="search($event)"
+                placeholder="Name, ID, platform, skin"
+            />
+        </label>
+        <label>
+            Sort by
+            <select [value]="sort()" (change)="changeSort($event)">
+                <option value="games">Games</option>
+                <option value="username">Username</option>
+                <option value="id">ID</option>
+                <option value="skin">Skin name</option>
+            </select>
+        </label>
+        <button
+            type="button"
+            class="secondary-button sort-direction"
+            (click)="reverse()"
+            [attr.aria-label]="direction() === 'desc' ? 'Sort descending; click to reverse' : 'Sort ascending; click to reverse'"
+            [title]="direction() === 'desc' ? 'Descending' : 'Ascending'"
+        >
+            {{ direction() === 'desc' ? '↓' : '↑' }}
+        </button>
+        <button
+            type="button"
+            class="toggle-ai"
+            [class.on]="showAI()"
+            [attr.aria-pressed]="showAI()"
+            (click)="toggleAI()"
+        >
+            <span class="toggle-check">{{ showAI() ? '✓' : '' }}</span>
+            Show AI
+        </button>
+        @if (platform()) {
+            <button type="button" class="toolbar-action" (click)="clearPlatform()">
+                Clear platform filter
+            </button>
+        }
+    </div>
+    @if (error()) {
+        <p class="notice error" role="alert">{{ error() }}</p>
+    }
+    @if (!filtering()) {
+        <div class="player-wall">
+            @for (player of players(); track player.playerID) {
+                <a
+                    class="player-card"
+                    [routerLink]="['/player', player.playerID]"
+                    (contextmenu)="copyName(player.username, $event)"
+                >
+                    <img
+                        [src]="skinUrl(player.skin, !!player.isAI)"
+                        (error)="skinFallback($event, !!player.isAI)"
+                        alt=""
+                        loading="lazy"
+                    />
+                    <div>
+                        <strong>{{ player.username }}</strong>
+                        <small class="identifier">{{ player.playerID }}</small>
+                        <span class="player-platform-line">
+                            {{ player.isAI ? 'AI' : (player.platform && player.platform.toUpperCase() !== 'NULL' ? player.platform : 'Unknown platform') }}
+                            @if (platformIcon(player.platform, !!player.isAI); as icon) {
+                                <img
+                                    class="platform-icon platform-icon-invert"
+                                    [src]="icon"
+                                    alt=""
+                                />
+                            } @else {
+                                <span class="platform-dot">·</span>
+                            }
+                            {{ formatCount(player.games) }}
+                            {{ player.games === 1 ? 'game' : 'games' }}
+                        </span>
+                    </div>
+                </a>
+            }
+        </div>
+        @if (!loading() && !players().length && !error()) {
+            <p class="notice">No players found.</p>
+        } @else if (hasMore() && !loading()) {
+            <button type="button" class="load-more" (click)="loadMore()">Load more players</button>
+        }
+    }
+</main>

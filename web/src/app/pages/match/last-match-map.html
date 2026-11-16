@@ -1,0 +1,476 @@
+<details class="panel match-map-panel collapsible" (toggle)="onToggle($event)">
+    <summary class="map-summary">Player movement map</summary>
+    @if (open()) {
+        <div #mapContent class="map-content">
+            <div class="map-heading">
+                <div class="map-intro">
+                    <p class="muted">
+                        Movement is read from the replay file and kept in memory for this session,
+                        without adding it to the database.
+                    </p>
+                    <div class="map-guide">
+                        <div>
+                            <strong>Time</strong>
+                            <span>
+                                Use the slider. With the map focused: ←/↓ back, →/↑ forward (steps
+                                follow Play speed); Space plays or pauses.
+                            </span>
+                        </div>
+                        <div>
+                            <strong>View</strong>
+                            <span>
+                                Double-click to zoom in 1×; double-right-click to zoom out 1×. Drag
+                                to pan. Click a player to follow; double-click them to find their
+                                Teams card.
+                            </span>
+                        </div>
+                        <div>
+                            <strong>Overlays</strong>
+                            <span>
+                                @if (timeline()) {
+                                    {{ formatCount(markers().length) }} players shown.
+                                }
+                                Coloured dots show 5 seconds before and after. Visibility shading is
+                                estimated; storm circles show the current and next zones.
+                            </span>
+                        </div>
+                        <div>
+                            <strong>Alignment</strong>
+                            <span>
+                                @if (!calibrated()) {
+                                    Positions are approximate until three points are calibrated.
+                                }
+                                Time offset shifts movement and storm; positive moves them forward.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                @if (access.readOnly()) {
+                    <strong>{{ selectedMap()?.name || 'No map selected' }}</strong>
+                } @else {
+                    <div class="map-picker-controls">
+                        <button
+                            type="button"
+                            class="secondary-button map-arrow"
+                            [disabled]="selectedMapIndex() <= 0"
+                            (click)="stepMap(-1)"
+                            aria-label="Previous map"
+                        >
+                            <span class="map-button-glyph">←</span>
+                        </button>
+                        <button
+                            type="button"
+                            class="secondary-button map-select"
+                            (click)="mapPickerOpen.set(true)"
+                        >
+                            Map: {{ selectedMap()?.name || 'No map selected' }}
+                        </button>
+                        <button
+                            type="button"
+                            class="secondary-button map-arrow"
+                            [disabled]="selectedMapIndex() < 0 || selectedMapIndex() >= maps().length - 1"
+                            (click)="stepMap(1)"
+                            aria-label="Next map"
+                        >
+                            <span class="map-button-glyph">→</span>
+                        </button>
+                    </div>
+                }
+            </div>
+            @if (mapPickerOpen()) {
+                <div class="map-modal-backdrop" (click)="mapPickerOpen.set(false)">
+                    <div
+                        class="map-modal panel"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Select map"
+                        (click)="$event.stopPropagation()"
+                    >
+                        <div class="map-modal-heading">
+                            <h2>Saved maps</h2>
+                            <button
+                                type="button"
+                                class="secondary-button"
+                                (click)="mapPickerOpen.set(false)"
+                                aria-label="Close map selector"
+                            >
+                                <span class="map-button-glyph">×</span>
+                            </button>
+                        </div>
+                        @for (map of maps(); track map.id) {
+                            <div
+                                class="saved-map-row"
+                                [class.selected]="map.id === selectedMapId()"
+                            >
+                                <label class="map-radio" [attr.aria-label]="'Select ' + map.name">
+                                    <input
+                                        type="radio"
+                                        name="selected-map"
+                                        [checked]="map.id === selectedMapId()"
+                                        (change)="selectMap(map.id)"
+                                    />
+                                </label>
+                                <input
+                                    #mapName
+                                    type="text"
+                                    maxlength="80"
+                                    [value]="map.name"
+                                    [attr.aria-label]="'Name for ' + map.name"
+                                    [readonly]="access.readOnly()"
+                                    (change)="renameMap(map.id, mapName.value)"
+                                    (keydown.enter)="mapName.blur()"
+                                />
+                                <span
+                                    class="map-calibration-state"
+                                    [class.calibrated]="map.calibrated"
+                                >
+                                    {{ map.calibrated ? 'Calibrated' : 'Uncalibrated' }}
+                                </span>
+                                @if (!access.readOnly()) {
+                                    <button
+                                        type="button"
+                                        class="danger-button"
+                                        (click)="deleteMap(map.id)"
+                                    >
+                                        Delete
+                                    </button>
+                                }
+                            </div>
+                        } @empty {
+                            <p class="muted">No maps saved yet.</p>
+                        }
+                        @if (!access.readOnly()) {
+                            <div class="map-add-row">
+                                <input
+                                    type="text"
+                                    maxlength="80"
+                                    placeholder="Map name"
+                                    [value]="newMapName()"
+                                    (input)="newMapName.set($any($event.target).value)"
+                                    aria-label="New map name"
+                                />
+                                <label class="secondary-button map-upload">
+                                    Add map image
+                                    <input
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/webp"
+                                        (change)="upload($event)"
+                                    />
+                                </label>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            @if (message()) {
+                <p class="map-message" role="status">{{ message() }}</p>
+            }
+            @if (!hasImage()) {
+                <p class="muted">
+                    Add a top-down map image to begin. Maps are saved beside the executable.
+                </p>
+            }
+            @if (loading()) {
+                <div class="map-loading" role="status">
+                    <span class="map-loading-spinner" aria-hidden="true"></span>
+                    <span>
+                        Loading movement from the replay… You can continue using the match page.
+                    </span>
+                </div>
+                @if (hasImage()) {
+                    <img
+                        class="map-loading-preview"
+                        [src]="imageUrl()"
+                        alt="Uploaded Fortnite map"
+                    />
+                }
+            } @else if (!timeline()) {
+                <p class="muted map-movement-message" role="status">{{ movementMessage() }}</p>
+                <button type="button" class="toolbar-action map-retry" (click)="retry()">
+                    Try again
+                </button>
+            }
+            @if (timeline(); as data) {
+                @if (!data.tracks.length) {
+                    <p class="muted">The reader returned no player locations for this replay.</p>
+                } @else {
+                    <div class="map-controls">
+                        <div class="map-time-controls">
+                            <label>
+                                Match time
+                                <input
+                                    type="range"
+                                    min="0"
+                                    [max]="data.duration"
+                                    step="0.1"
+                                    [value]="time()"
+                                    (input)="setTime($event)"
+                                />
+                            </label>
+                            <strong>{{ clock(time()) }} / {{ clock(data.duration) }}</strong>
+                            <button type="button" class="secondary-button" (click)="togglePlay()">
+                                {{ playing() ? 'Pause' : 'Play' }}
+                            </button>
+                            @if (activePlayerId()) {
+                                <button
+                                    type="button"
+                                    class="secondary-button"
+                                    (click)="activePlayerChange.emit(null)"
+                                >
+                                    Stop following
+                                </button>
+                            }
+                        </div>
+                        <div class="map-adjustments">
+                            <label>
+                                Map zoom
+                                <input
+                                    type="range"
+                                    min="1"
+                                    max="10"
+                                    step="0.1"
+                                    [value]="zoom()"
+                                    (input)="setZoom($event)"
+                                />
+                                <strong>{{ zoom().toFixed(1) }}×</strong>
+                            </label>
+                            <label>
+                                Play speed
+                                <input
+                                    type="range"
+                                    min="0.25"
+                                    max="4"
+                                    step="0.25"
+                                    [value]="playSpeed()"
+                                    (input)="setPlaySpeed($event)"
+                                />
+                                <strong>{{ playSpeed() }}×</strong>
+                            </label>
+                        </div>
+                    </div>
+                    @if (hasImage()) {
+                        <div
+                            #mapViewport
+                            class="map-viewport"
+                            tabindex="0"
+                            role="region"
+                            aria-label="Player movement map"
+                            [style.width.px]="mapViewportWidth()"
+                            [style.height.px]="mapViewportHeight()"
+                            [class.pannable]="zoom() > 1"
+                            [class.dragging]="draggingMap()"
+                            (keydown)="onMapKeydown($event)"
+                            (dblclick)="onMapDoubleClick($event)"
+                            (contextmenu)="$event.preventDefault()"
+                            (pointerdown)="startPan($event)"
+                            (pointermove)="movePan($event)"
+                            (pointerup)="endPan($event)"
+                            (pointercancel)="endPan($event)"
+                        >
+                            <div
+                                #mapStage
+                                class="map-stage"
+                                [style.width.px]="mapStageWidth()"
+                                (click)="placeAnchor($event)"
+                                [class.calibrating]="pendingAnchor()"
+                            >
+                                <img
+                                    [src]="imageUrl()"
+                                    alt="Uploaded Fortnite map"
+                                    (load)="onMapImageLoad($event)"
+                                />
+                                <svg
+                                    class="map-trails-overlay"
+                                    viewBox="0 0 1000 1000"
+                                    preserveAspectRatio="none"
+                                    aria-hidden="true"
+                                >
+                                    @for (dot of trailDots(); track dot.key) {
+                                        <circle
+                                            [attr.cx]="dot.u * 1000"
+                                            [attr.cy]="dot.v * 1000"
+                                            [attr.r]="3.1 / zoom()"
+                                            [attr.fill]="dot.color"
+                                            [attr.opacity]="dot.opacity"
+                                        />
+                                        <circle
+                                            [attr.cx]="dot.u * 1000"
+                                            [attr.cy]="dot.v * 1000"
+                                            [attr.r]=".9 / zoom()"
+                                            fill="none"
+                                            [attr.stroke]="dot.future ? '#fff' : '#101113'"
+                                            [attr.stroke-width]=".5 / zoom()"
+                                        />
+                                    }
+                                </svg>
+                                <svg
+                                    class="map-storm-overlay"
+                                    viewBox="0 0 1000 1000"
+                                    preserveAspectRatio="none"
+                                    aria-hidden="true"
+                                >
+                                    @if (stormShade()) {
+                                        <path
+                                            class="outside"
+                                            [attr.d]="stormShade()"
+                                            fill-rule="evenodd"
+                                        />
+                                    }
+                                    @if (visibilityShade()) {
+                                        <path
+                                            class="visibility-outside"
+                                            [attr.d]="visibilityShade()"
+                                            fill-rule="evenodd"
+                                        />
+                                    }
+                                    @for (ring of stormRings(); track ring.kind) {
+                                        <polyline
+                                            [attr.points]="ring.points"
+                                            [attr.class]="ring.kind"
+                                        />
+                                    }
+                                </svg>
+                                @for (marker of markers(); track marker.id) {
+                                    <button
+                                        type="button"
+                                        class="map-marker"
+                                        [class.active-player]="isActivePlayer(marker.id)"
+                                        [style.left.%]="marker.u * 100"
+                                        [style.top.%]="marker.v * 100"
+                                        (click)="selectMarker(marker.id, $event)"
+                                        (dblclick)="jumpToTeam(marker.id, $event)"
+                                        [attr.aria-pressed]="isActivePlayer(marker.id)"
+                                        [attr.aria-label]="marker.team + ' | ' + marker.name + ' (' + marker.elevation + ')'"
+                                    >
+                                        <svg
+                                            viewBox="0 0 100 100"
+                                            aria-hidden="true"
+                                            [style.transform]="'rotate(' + marker.angle + 'deg)'"
+                                        >
+                                            <path
+                                                d="M 50 10 L 80 78 L 59 73 A 9 9 0 0 0 41 73 L 20 78 Z"
+                                                [attr.fill]="teamColor(marker.team)"
+                                                stroke="#1A1A1A"
+                                                stroke-width="2.5"
+                                                stroke-linejoin="miter"
+                                                stroke-linecap="square"
+                                            />
+                                        </svg>
+                                        <span class="map-tooltip">
+                                            {{ formatCount(marker.team) }} | {{ marker.name }}
+                                            <small class="map-elevation">
+                                                ({{ marker.elevation }})
+                                            </small>
+                                        </span>
+                                    </button>
+                                }
+                                @for (
+                                    anchor of alignmentOpen() && !access.readOnly() ? anchorMarkers() : [];
+                                    track $index
+                                ) {
+                                    <span
+                                        class="map-anchor"
+                                        [style.left.%]="anchor[0] * 100"
+                                        [style.top.%]="anchor[1] * 100"
+                                        [title]="'Anchor ' + ($index + 1)"
+                                    >
+                                        {{ $index + 1 }}
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                        @if (!access.readOnly()) {
+                            <details
+                                class="map-calibration collapsible"
+                                [open]="alignmentOpen()"
+                                (toggle)="alignmentOpen.set($any($event.target).open)"
+                            >
+                                <summary>
+                                    Map alignment and synchronization ·
+                                    {{ calibrated() ? 'Calibrated' : anchors().length + '/3 points marked' }}
+                                </summary>
+                                <p class="muted">
+                                    Calibration saves only after all three points are set. Visit
+                                    three distinct corners of the map for the best alignment.
+                                    Rotation is saved separately, even before calibration. X and Y
+                                    are Unreal world coordinates in approximately centimeter-scale
+                                    units.
+                                </p>
+                                <div class="map-calibration-controls">
+                                    <label>
+                                        Player at {{ clock(time()) }}
+                                        <select
+                                            [value]="chosenId()"
+                                            (change)="choosePlayer($event)"
+                                        >
+                                            <option value="">Choose player</option>
+                                            @for (track of availableTracks(); track track.id) {
+                                                <option [value]="track.id">
+                                                    {{ track.name }} · Team
+                                                    {{ formatCount(track.team) }}
+                                                </option>
+                                            }
+                                        </select>
+                                    </label>
+                                    <button
+                                        type="button"
+                                        class="secondary-button"
+                                        (click)="turnClockwise()"
+                                    >
+                                        Rotate coordinates 90° clockwise ({{ rotation() }}°)
+                                    </button>
+                                    <label>
+                                        Map time offset (ms)
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            [value]="timeOffsetMs()"
+                                            (change)="setTimeOffset($event)"
+                                        />
+                                    </label>
+                                    @if (anchors().length) {
+                                        <button
+                                            type="button"
+                                            class="secondary-button"
+                                            (click)="resetCalibration()"
+                                        >
+                                            Start alignment over
+                                        </button>
+                                    }
+                                    <button
+                                        type="button"
+                                        class="secondary-button"
+                                        [disabled]="!chosenSample() || anchors().length >= 3"
+                                        (click)="pendingAnchor.set(true)"
+                                    >
+                                        Click map for point {{ anchors().length + 1 }}
+                                    </button>
+                                    @if (pendingAnchor()) {
+                                        <span role="status">
+                                            Now click the selected player's location on the map.
+                                        </span>
+                                    }
+                                    @if (anchors().length) {
+                                        <button
+                                            type="button"
+                                            class="secondary-button"
+                                            (click)="undoAnchor()"
+                                        >
+                                            Undo point
+                                        </button>
+                                    }
+                                </div>
+                                @if (chosenSample(); as sample) {
+                                    <p class="map-coordinates">
+                                        Selected world position: X {{ sample[1] }}, Y
+                                        {{ sample[2] }}
+                                    </p>
+                                }
+                            </details>
+                        }
+                    }
+                }
+            }
+        </div>
+    }
+</details>

@@ -1,0 +1,194 @@
+<main class="page narrow-page settings-page">
+    <h1>Settings</h1>
+    @if (error()) {
+        <p class="notice error" role="alert">{{ error() }}</p>
+    }
+    @if (settings(); as current) {
+        <section class="panel settings-fields">
+            <h2>Accounts</h2>
+            @if (ownerProfiles().length) {
+                <div class="owner-profiles">
+                    @for (owner of ownerProfiles(); track owner.playerID) {
+                        <button
+                            type="button"
+                            class="owner-profile"
+                            (click)="removeOwner(owner.playerID)"
+                            [attr.aria-label]="'Remove ' + owner.username + ' from your accounts'"
+                            title="Remove this account"
+                        >
+                            <strong>{{ owner.username }}</strong>
+                            <span class="identifier">{{ owner.playerID }}</span>
+                            <span class="owner-remove" aria-hidden="true">×</span>
+                        </button>
+                    }
+                </div>
+            }
+            <label for="player-ids">Your player IDs, one per line</label>
+            <textarea
+                id="player-ids"
+                [value]="playerIdsText()"
+                (input)="changePlayerIds($event)"
+                placeholder="Fortnite player ID"
+            ></textarea>
+            <p class="muted">
+                These IDs identify your eliminations when a replay's owner is missing. They also
+                exclude your accounts from Snipers in this match.
+            </p>
+            @if (visibleSuggested().length) {
+                <div class="suggested-ids">
+                    <span class="muted">IDs found as replay owners in two or more games:</span>
+                    <div
+                        class="suggested-owner-list"
+                        [class.scrollable]="visibleSuggested().length > 2"
+                        [class.single]="visibleSuggested().length === 1"
+                    >
+                        @for (item of visibleSuggested(); track item.playerID) {
+                            <button
+                                type="button"
+                                class="toolbar-action suggested-owner"
+                                (click)="addSuggested(item.playerID)"
+                            >
+                                <strong>{{ item.username }}</strong>
+                                <span>
+                                    {{ item.playerID }} · {{ formatCount(item.games) }} games
+                                </span>
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+            @if (saveTarget() === 'accounts' && (saving() || message())) {
+                <p role="status" class="settings-message">{{ saving() ? 'Saving…' : message() }}</p>
+            }
+        </section>
+        <section class="panel settings-fields">
+            <h2>Access from another computer</h2>
+            <p class="muted">
+                Open one of these addresses on another device on the same network. If several
+                appear, use your Wi-Fi or Ethernet address. Windows Firewall may ask you to allow
+                access. These local addresses can change your data; proxy views are read-only.
+            </p>
+            @if (lanUrls().length) {
+                @for (url of lanUrls(); track url) {
+                    <input
+                        class="readonly-url"
+                        type="text"
+                        [value]="url"
+                        readonly
+                        (click)="selectText($event)"
+                        aria-label="Local network URL"
+                    />
+                }
+            } @else {
+                <p>
+                    No private-network IPv4 address was found. Connect this computer to your local
+                    network.
+                </p>
+            }
+            <p class="muted">On this computer: {{ localUrl() }}</p>
+            <label class="settings-toggle">
+                <input
+                    type="checkbox"
+                    [checked]="current.proxyEnabled"
+                    (change)="patch('proxyEnabled', $any($event.target).checked)"
+                />
+                Allow read-only views through a proxy
+            </label>
+            @if (saveTarget() === 'access' && (saving() || message())) {
+                <p role="status" class="settings-message">{{ saving() ? 'Saving…' : message() }}</p>
+            }
+        </section>
+        <section class="panel settings-fields">
+            <h2>General</h2>
+            <label for="sniper-threshold">Snipers in this match: minimum shared games</label>
+            <input
+                id="sniper-threshold"
+                type="number"
+                min="1"
+                max="1000"
+                [value]="current.sniperThreshold"
+                (input)="patch('sniperThreshold', +$any($event.target).value)"
+            />
+            <label class="settings-toggle">
+                <input
+                    type="checkbox"
+                    [checked]="current.autoSwitchLastMatch"
+                    (change)="patch('autoSwitchLastMatch', $any($event.target).checked)"
+                />
+                Switch to Last match after a watched replay is read
+            </label>
+            <label class="settings-toggle">
+                <input
+                    type="checkbox"
+                    [checked]="current.hideTrayIcon"
+                    (change)="patch('hideTrayIcon', $any($event.target).checked)"
+                />
+                Hide the system tray icon
+            </label>
+            <label class="settings-toggle">
+                <input
+                    type="checkbox"
+                    [checked]="current.openBrowserOnLaunch"
+                    (change)="patch('openBrowserOnLaunch', $any($event.target).checked)"
+                />
+                Open the browser when Sniper Hunter starts
+            </label>
+            <label class="settings-toggle">
+                <input
+                    type="checkbox"
+                    [checked]="current.downloadMissingSkins"
+                    (change)="patch('downloadMissingSkins', $any($event.target).checked)"
+                />
+                Download missing skin icons
+            </label>
+            <label class="settings-toggle">
+                <input
+                    type="checkbox"
+                    [checked]="current.customCursorEnabled"
+                    (change)="patch('customCursorEnabled', $any($event.target).checked)"
+                />
+                Use the Sniper Hunter cursor
+            </label>
+            <fieldset class="setting-radio-group">
+                <legend>Back to top button position</legend>
+                <label>
+                    <input
+                        type="radio"
+                        name="back-to-top-side"
+                        value="left"
+                        [checked]="current.backToTopSide === 'left'"
+                        (change)="patch('backToTopSide', 'left')"
+                    />
+                    Left
+                </label>
+                <label>
+                    <input
+                        type="radio"
+                        name="back-to-top-side"
+                        value="right"
+                        [checked]="current.backToTopSide === 'right'"
+                        (change)="patch('backToTopSide', 'right')"
+                    />
+                    Right
+                </label>
+            </fieldset>
+            <p class="muted">The browser-launch setting takes effect on the next start.</p>
+            @if (saveTarget() === 'general' && (saving() || message())) {
+                <p role="status" class="settings-message">{{ saving() ? 'Saving…' : message() }}</p>
+            }
+        </section>
+    }
+    <section class="panel console-panel" aria-labelledby="console-heading">
+        <h2 id="console-heading">Console</h2>
+        <div class="console-output" role="log" aria-live="off">
+            @for (entry of entries(); track entry.id) {
+                <div class="console-line" [class.console-error]="entry.level === 'error'">
+                    <time>{{ entry.localTime || entry.time.slice(11, 19) }}</time>
+                    <span>{{ entry.message }}</span>
+                </div>
+            } @empty {
+                <p>Waiting for log messages…</p>
+            }
+        </div>
+    </section>
+</main>

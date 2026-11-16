@@ -1,0 +1,271 @@
+/* Settings forms, account suggestions and About. */
+
+.settings-page .panel {
+  margin-top: 0.8rem;
+}
+
+.settings-fields {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.settings-fields h2,
+.settings-fields p {
+  margin: 0;
+}
+
+.settings-fields h3 {
+  margin: 0.65rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px solid #4d5060;
+  font-size: 1rem;
+}
+
+.settings-fields textarea {
+  min-height: 6.5rem;
+  resize: vertical;
+}
+
+.settings-fields textarea,
+.settings-fields input[type='number'],
+.readonly-url {
+  width: 100%;
+  border: 1px solid #777b8a;
+  border-radius: 0.3rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--bg-color);
+  color: var(--light-white);
+  font: inherit;
+}
+
+.settings-fields input[type='number'] {
+  max-width: 9rem;
+}
+
+.readonly-url {
+  margin: 0.25rem 0;
+  font-family: Consolas, monospace;
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.settings-toggle input {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--red-red);
+}
+
+.setting-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  margin: 0.25rem 0;
+  padding: 0;
+  border: 0;
+}
+
+.setting-radio-group legend {
+  width: 100%;
+  margin-bottom: 0.3rem;
+  padding: 0;
+}
+
+.setting-radio-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.setting-radio-group input {
+  accent-color: var(--red-red);
+}
+
+.suggested-ids {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  margin-top: 0.25rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid #4d5060;
+}
+
+.suggested-owner-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.suggested-owner-list.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.suggested-owner-list.scrollable {
+  max-height: calc(3.8rem * 1.5 + 0.35rem);
+}
+
+.suggested-owner-list .suggested-owner {
+  min-height: 3.8rem;
+  width: 100%;
+  white-space: normal;
+}
+
+.suggested-ids button {
+  min-height: 2rem;
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.settings-save {
+  justify-self: start;
+}
+
+.settings-message {
+  color: #d6f7d7;
+}
+
+.owner-profiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.owner-profile,
+.suggested-owner {
+  display: grid;
+  gap: 0.15rem;
+  text-align: center;
+}
+
+.owner-profile {
+  position: relative;
+  padding: 0.5rem 1.5rem 0.5rem 0.7rem;
+  border: 1px solid #777b8a;
+  border-radius: 0.3rem;
+  background: var(--bg-color);
+  color: var(--light-white);
+  font: inherit;
+}
+
+.owner-profile:hover,
+.owner-profile:focus-visible {
+  border-color: #d55b75;
+  background: #3f2630;
+}
+
+.owner-remove {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.5rem;
+  color: #f0647e;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.owner-profile .identifier,
+.suggested-owner span {
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.settings-fields select {
+  max-width: 11rem;
+}
+
+.about-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.about-heading p {
+  margin: 0;
+}
+
+.about-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.about-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 3rem;
+  min-width: 7.5rem;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid #a72b45;
+  border-radius: 0.4rem;
+  background: var(--red-red);
+  color: var(--light-white);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.about-link:hover {
+  background: #a72b45;
+}
+
+.about-link.disabled {
+  opacity: 0.55;
+  background: var(--bg-alternate);
+}
+
+.about-link svg {
+  width: 1.3rem;
+  height: 1.3rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.about-link img {
+  width: 1.3rem;
+  height: 1.3rem;
+  flex: none;
+  filter: brightness(0) invert(1);
+}
+
+.about-link > span {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.about-update-message {
+  margin: 0.45rem 0 0;
+}
+
+.about-update-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+}
+
+.update-separator {
+  transform: translateY(-0.125em);
+}
+
+.about-features {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #4d5060;
+}
+
+.about-feature-groups h3 {
+  margin: 1.1rem 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.about-feature-groups section + section {
+  border-top: 1px solid #4d5060;
+}
