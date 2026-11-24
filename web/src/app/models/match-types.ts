@@ -35,6 +35,8 @@ export interface Elimination {
   killedName: string;
   killerSkin: string | null;
   killedSkin: string | null;
+  killerPlatform: string | null;
+  killedPlatform: string | null;
   killerBot: number;
   killedBot: number;
 }

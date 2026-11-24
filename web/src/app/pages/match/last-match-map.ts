@@ -36,7 +36,7 @@ export class LastMatchMap implements OnDestroy {
   readonly replayName = input.required<string>();
   readonly activePlayerId = input<string | null>(null);
   /** Selection output shared with the teams/feed controller without implying a page scroll. */
-  readonly activePlayerChange = output<string | null>();
+  readonly activePlayerChange = output<{ id: string; name: string } | null>();
   /** Explicit double-click jump request; the parent owns revealing the teams-table card. */
   readonly playerJumpToTeam = output<string>();
   readonly mapViewport = viewChild<ElementRef<HTMLElement>>('mapViewport');
@@ -86,6 +86,8 @@ export class LastMatchMap implements OnDestroy {
   private panStart: { x: number; y: number; left: number; top: number } | null = null;
   private lastRightDown: { at: number; x: number; y: number } | null = null;
   private followFrame = 0;
+  /** Delays map-click selection so a double-click can jump before the viewport pans. */
+  private markerSelectTimer: ReturnType<typeof setTimeout> | null = null;
   /** Promise chain preserving calibration-write order when the user edits quickly. */
   private calibrationSave = Promise.resolve();
   readonly calibrated = computed(() => this.saved() && transform(this.anchors()) !== null);
@@ -468,7 +470,12 @@ export class LastMatchMap implements OnDestroy {
     event.preventDefault();
     event.stopPropagation();
     if (event.detail > 1) return;
-    this.activePlayerChange.emit(this.isActivePlayer(id) ? null : id);
+    if (this.markerSelectTimer) clearTimeout(this.markerSelectTimer);
+    const name = this.markers().find((marker) => marker.id === id)?.name || id;
+    this.markerSelectTimer = setTimeout(() => {
+      this.markerSelectTimer = null;
+      this.activePlayerChange.emit(this.isActivePlayer(id) ? null : { id, name });
+    }, 150);
   }
 
   /**
@@ -480,7 +487,10 @@ export class LastMatchMap implements OnDestroy {
   jumpToTeam(id: string, event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
-    this.activePlayerChange.emit(id);
+    if (this.markerSelectTimer) clearTimeout(this.markerSelectTimer);
+    this.markerSelectTimer = null;
+    const name = this.markers().find((marker) => marker.id === id)?.name || id;
+    this.activePlayerChange.emit({ id, name });
     this.playerJumpToTeam.emit(id);
   }
 
@@ -917,6 +927,7 @@ export class LastMatchMap implements OnDestroy {
    */
   ngOnDestroy(): void {
     if (this.timer) clearInterval(this.timer);
+    if (this.markerSelectTimer) clearTimeout(this.markerSelectTimer);
     cancelAnimationFrame(this.followFrame);
   }
 }

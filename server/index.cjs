@@ -485,12 +485,25 @@ const activity = {
   failedAt: 0,
   failedName: '',
   failedReason: '',
+  failedSource: '',
 };
 /** Persisted retry marker for a watcher file Fortnite may still be writing. */
 const REPLAY_WAITING_MESSAGE = 'Waiting for Fortnite to finish writing this replay.';
 /** Persisted failure marker that allows a later file change to restart parsing. */
-const REPLAY_CORRUPT_MESSAGE =
-  'Replay remained unreadable after the game ended; the replay may be corrupt.';
+const REPLAY_CORRUPT_MESSAGE = 'Replay appears corrupted';
+/** A zero-byte replay that remained unchanged long enough to be treated as corrupt. */
+const REPLAY_EMPTY_MESSAGE = 'Replay file remained empty; it may be corrupt.';
+
+/**
+ * Identify a transient SQLite writer lock without treating it as replay corruption.
+ * @param error Error reported by the Node SQLite connection or replay worker.
+ * @returns Whether another database writer currently owns the lock.
+ */
+function isDatabaseBusy(error) {
+  return (
+    error?.errcode === 5 || /database is locked|SQLITE_BUSY/i.test(String(error?.message || error))
+  );
+}
 
 /**
  * Parse the optional port override and reject unknown or repeated launch arguments.
@@ -1248,8 +1261,11 @@ function matchDetails(db, match) {
       COALESCE(NULLIF(k.username, ''), e.killerID) AS killerName,
       COALESCE(NULLIF(v.username, ''), e.killedID) AS killedName,
       k.skin AS killerSkin, v.skin AS killedSkin,
-      COALESCE(kg.isBot, CAST(k.isBot AS INTEGER), 0) AS killerBot,
-      COALESCE(vg.isBot, CAST(v.isBot AS INTEGER), 0) AS killedBot
+      k.platform AS killerPlatform, v.platform AS killedPlatform,
+      CASE WHEN LOWER(e.killerID) = 'bot' THEN 1
+        ELSE COALESCE(kg.isBot, CAST(k.isBot AS INTEGER), 0) END AS killerBot,
+      CASE WHEN LOWER(e.killedID) = 'bot' THEN 1
+        ELSE COALESCE(vg.isBot, CAST(v.isBot AS INTEGER), 0) END AS killedBot
     FROM GameEliminations AS e
     LEFT JOIN Players AS k ON k.playerID = e.killerID
     LEFT JOIN Players AS v ON v.playerID = e.killedID
@@ -1534,7 +1550,24 @@ function createReaderQueue(db, skinSync) {
   let busy = false;
   const watcherRetryAt = new Map();
   const watcherAttempts = new Map();
+  const databaseRetryAttempts = new Map();
   const loggedInProgress = new Set();
+
+  /**
+   * Retry a short-lived SQLite writer lock without losing a completed parser result.
+   * @param operation Synchronous database update to repeat after a transient lock.
+   * @returns The operation result after the lock clears.
+   */
+  async function retryDatabaseBusy(operation) {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return operation();
+      } catch (error) {
+        if (!isDatabaseBusy(error) || attempt >= 5) throw error;
+        await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+      }
+    }
+  }
   /**
    * Recognize parser errors caused by an encrypted, locked or incomplete live replay.
    * @param message Parser error text.
@@ -1546,7 +1579,7 @@ function createReaderQueue(db, skinSync) {
     );
 
   /**
-   * Run the external parser with a seven-second timeout and classify its output/exit status.
+   * Run the external parser with a ten-second timeout and classify its output/exit status.
    * @param input Replay path to read without moving the source file.
    * @param outputDirectory Optional isolated output directory; defaults to the queue reader directory.
    * @returns A promise resolving after the parser exits successfully.
@@ -1569,7 +1602,7 @@ function createReaderQueue(db, skinSync) {
         const timeout = setTimeout(() => {
           timedOut = true;
           child.kill();
-        }, 7000);
+        }, 10000);
         child.once('error', (error) => {
           clearTimeout(timeout);
           reject(error);
@@ -1577,7 +1610,7 @@ function createReaderQueue(db, skinSync) {
         child.once('close', (code) => {
           clearTimeout(timeout);
           if (timedOut)
-            return reject(new Error('SniperHunterParser.exe exceeded the 7-second replay limit.'));
+            return reject(new Error('SniperHunterParser.exe exceeded the 10-second replay limit.'));
           if (code === 0) resolve();
           else {
             const detail = stderr.trim();
@@ -1634,14 +1667,15 @@ function createReaderQueue(db, skinSync) {
    */
   function recordImported(next, result) {
     const { imported: importedReplay, timeline, skinIds, warning } = result;
-    if (warning) console.warn(warning);
-    watcherRetryAt.delete(next.id);
-    watcherAttempts.delete(next.id);
-    loggedInProgress.delete(next.id);
     db.prepare('UPDATE ReplayImports SET status = ? WHERE id = ?').run(
       importedReplay.duplicate ? 'duplicate' : 'decoded',
       next.id,
     );
+    if (warning) console.warn(warning);
+    watcherRetryAt.delete(next.id);
+    watcherAttempts.delete(next.id);
+    databaseRetryAttempts.delete(next.id);
+    loggedInProgress.delete(next.id);
     if (importedReplay.duplicate) {
       activity.duplicateAt = Date.now();
       activity.duplicateName = next.name;
@@ -1664,59 +1698,65 @@ function createReaderQueue(db, skinSync) {
    * @param next ReplayImports queue row.
    * @param input Source replay path used to check modification time.
    * @param error Parser or worker error.
+   * @param readerFailed Whether the external reader itself failed before producing JSON.
    * @returns Nothing; updates retry state and queue status.
    */
-  function recordImportFailure(next, input, error) {
-    const reason = String(error.message || error);
-    const attempts = (watcherAttempts.get(next.id) || 0) + 1;
-    const newerReplay =
-      next.source === 'watcher' &&
-      db
-        .prepare("SELECT 1 FROM ReplayImports WHERE source = 'watcher' AND addedAt > ? LIMIT 1")
-        .get(next.addedAt);
-    let inactiveIncomplete = false;
-    if (
-      next.source === 'watcher' &&
-      /marked encrypted but not yet marked as completed/i.test(reason)
-    ) {
-      try {
-        // A completed or corrupt file that has stayed unchanged should not hold
-        // the progress bar in the "in progress" state indefinitely.
-        inactiveIncomplete = Date.now() - fs.statSync(input).mtimeMs > 30 * 1000;
-      } catch {
-        /* A missing replay is handled by the next attempt. */
+  function recordImportFailure(next, input, error, readerFailed) {
+    let reason = String(error.message || error);
+    if (next.source === 'watcher' && isDatabaseBusy(error)) {
+      const attempts = (databaseRetryAttempts.get(next.id) || 0) + 1;
+      if (attempts <= 5) {
+        db.prepare(
+          "UPDATE ReplayImports SET status = 'awaiting-reader', error = ? WHERE id = ?",
+        ).run('Waiting for the database to become available.', next.id);
+        databaseRetryAttempts.set(next.id, attempts);
+        watcherRetryAt.set(next.id, Date.now() + Math.min(30000, attempts * 5000));
+        console.warn(`Database busy while importing ${next.name}; retry ${attempts}/5 queued.`);
+        return;
       }
     }
-    const likelyCorrupt = attempts >= 3 && (newerReplay || inactiveIncomplete);
-    if (next.source === 'watcher' && unfinishedReplay(reason) && !likelyCorrupt) {
-      watcherAttempts.set(next.id, attempts);
-      watcherRetryAt.set(next.id, Date.now() + Math.min(30000, attempts * 5000));
+    try {
+      if (fs.statSync(input).size === 0) reason = REPLAY_EMPTY_MESSAGE;
+    } catch {
+      /* Preserve the parser error when the source has disappeared. */
+    }
+    const attempts = (watcherAttempts.get(next.id) || 0) + 1;
+    let quietFor = 0;
+    try {
+      quietFor = Date.now() - Math.max(fs.statSync(input).mtimeMs, Date.parse(next.addedAt));
+    } catch {
+      /* Missing files and other non-reader failures are reported immediately. */
+    }
+    const likelyCorrupt = attempts >= 3 && quietFor >= 30000;
+    if (next.source === 'watcher' && readerFailed && fs.existsSync(input) && !likelyCorrupt) {
       db.prepare("UPDATE ReplayImports SET status = 'awaiting-reader', error = ? WHERE id = ?").run(
         REPLAY_WAITING_MESSAGE,
         next.id,
       );
+      watcherAttempts.set(next.id, attempts);
+      watcherRetryAt.set(next.id, Date.now() + Math.max(2000, 30000 - quietFor));
       if (!loggedInProgress.has(next.id)) {
         loggedInProgress.add(next.id);
         console.log(`Replay ${next.name} is still in progress; retrying after Fortnite finishes.`);
       }
     } else {
-      watcherRetryAt.delete(next.id);
-      watcherAttempts.delete(next.id);
-      loggedInProgress.delete(next.id);
       const finalReason =
-        likelyCorrupt && unfinishedReplay(reason)
+        next.source === 'watcher' && readerFailed && likelyCorrupt
           ? REPLAY_CORRUPT_MESSAGE
-          : /marked encrypted but not yet marked as completed/i.test(reason)
-            ? 'Fortnite marked this replay incomplete. If the match has ended, the replay is corrupt and cannot be parsed.'
-            : reason;
-      console.error(`Replay ${next.id} failed:`, finalReason);
+          : reason;
       db.prepare("UPDATE ReplayImports SET status = 'failed', error = ? WHERE id = ?").run(
         finalReason.slice(0, 1000),
         next.id,
       );
+      watcherRetryAt.delete(next.id);
+      watcherAttempts.delete(next.id);
+      databaseRetryAttempts.delete(next.id);
+      loggedInProgress.delete(next.id);
+      console.error(`Replay ${next.id} failed:`, finalReason);
       activity.failedAt = Date.now();
       activity.failedName = next.name;
       activity.failedReason = finalReason;
+      activity.failedSource = next.source;
     }
   }
 
@@ -1758,10 +1798,13 @@ function createReaderQueue(db, skinSync) {
       next.id,
     );
 
+    let readerFailed = false;
     try {
       if (fs.existsSync(sharedOutput)) fs.unlinkSync(sharedOutput);
       if (!fs.existsSync(input)) throw new Error('Replay file is missing.');
+      readerFailed = true;
       await runReader(input);
+      readerFailed = false;
       if (!fs.existsSync(sharedOutput)) throw new Error('Reader did not write replay.json.');
       const result = await runReplayWork({
         action: 'import',
@@ -1769,9 +1812,9 @@ function createReaderQueue(db, skinSync) {
         name: next.name,
         ownerIds: settings.playerIds,
       });
-      recordImported(next, result);
+      await retryDatabaseBusy(() => recordImported(next, result));
     } catch (error) {
-      recordImportFailure(next, input, error);
+      await retryDatabaseBusy(() => recordImportFailure(next, input, error, readerFailed));
     } finally {
       cleanupInput(next, input);
     }
@@ -1800,29 +1843,20 @@ function createReaderQueue(db, skinSync) {
     enqueue: () => {
       void drain().catch((error) => console.error('Replay queue failed:', error));
     },
-    wakeWatcher: (name) => {
-      const entries = db
-        .prepare(
-          "SELECT id FROM ReplayImports WHERE source = 'watcher' AND name = ? AND status = 'awaiting-reader' AND error = ?",
-        )
-        .all(name, REPLAY_WAITING_MESSAGE);
-      for (const entry of entries) {
-        watcherRetryAt.delete(entry.id);
-      }
-      if (entries.length)
-        void drain().catch((error) => console.error('Replay queue failed:', error));
+    resetWatcher: (id) => {
+      watcherAttempts.delete(id);
+      watcherRetryAt.delete(id);
+      databaseRetryAttempts.delete(id);
+      loggedInProgress.delete(id);
     },
     start: () => {
       db.exec("UPDATE ReplayImports SET status = 'awaiting-reader' WHERE status = 'processing'");
-      db.exec(
-        "UPDATE ReplayImports SET status = 'awaiting-reader' WHERE source = 'watcher' AND status = 'watching'",
-      );
       for (const entry of db
         .prepare(
           "SELECT id, error FROM ReplayImports WHERE source = 'watcher' AND status = 'failed'",
         )
         .all())
-        if (unfinishedReplay(entry.error || ''))
+        if (unfinishedReplay(entry.error || '') || isDatabaseBusy(entry.error || ''))
           db.prepare(
             "UPDATE ReplayImports SET status = 'awaiting-reader', error = NULL WHERE id = ?",
           ).run(entry.id);
@@ -1994,12 +2028,11 @@ try {
 
 /**
  * Watch Fortnite Demos for the newest replay and wake queued retries when file metadata changes.
- * @param db Database connection for import deduplication.
  * @param enqueue Callback that wakes the parser queue.
- * @param wakeWatcher Callback that clears a changed replay file’s retry delay.
+ * @param resetWatcher Callback that forgets failed checks after Fortnite writes again.
  * @returns Nothing; installs the filesystem watcher and lightweight rescan timer.
  */
-function startDemoWatcher(db, enqueue, wakeWatcher) {
+function startDemoWatcher(enqueue, resetWatcher) {
   if (!fs.existsSync(demoRoot) || !fs.statSync(demoRoot).isDirectory()) {
     activity.watcherError = 'Fortnite demo folder not found. File watcher was not enabled.';
     console.warn(`${activity.watcherError} (${demoRoot})`);
@@ -2008,66 +2041,171 @@ function startDemoWatcher(db, enqueue, wakeWatcher) {
   const known = new Set(
     fs.readdirSync(demoRoot).filter((name) => name.toLowerCase().endsWith('.replay')),
   );
-  const pending = new Map();
-  const wakeTimers = new Map();
+  // A short timeout keeps filesystem events responsive while the replay worker
+  // refreshes its player cache in a separate write transaction.
+  const watcherDb = new DatabaseSync(databasePath);
+  watcherDb.exec('PRAGMA busy_timeout = 100');
+  process.once('exit', () => watcherDb.close());
+  const observed = new Map();
+  const readStatus = watcherDb.prepare('SELECT status FROM ReplayImports WHERE id = ?');
+  const loggedBusy = new Set();
   activity.watcherError = null;
 
   /**
-   * Debounce a watcher candidate until its file size and modification time settle.
-   * @param name Replay filename reported by the directory watcher.
-   * @returns Nothing; schedules the nested stability check.
+   * Retain watcher state when SQLite is temporarily locked and log only its first occurrence.
+   * @param name Replay filename whose database update needs another attempt.
+   * @returns Nothing; the three-second scan will retry the unchanged observation.
    */
-  function schedule(name) {
-    if (!name.toLowerCase().endsWith('.replay') || known.has(name) || pending.has(name)) return;
-    known.add(name);
-    activity.detectedAt = Date.now();
-    activity.detectedName = name;
-    const id = require('node:crypto').randomUUID().replaceAll('-', '');
-    db.prepare(
-      'INSERT INTO ReplayImports (id, name, status, addedAt, size, source) VALUES (?, ?, ?, ?, ?, ?)',
-    ).run(id, name, 'watching', new Date().toISOString(), 0, 'watcher');
-    let previousSize = -1;
-    let stable = 0;
-    /**
-     * Recheck the pending watcher file and enqueue it after a stable observation.
-     * @returns Nothing; reschedules while Fortnite is still writing.
-     */
-    const check = () => {
-      const source = path.join(demoRoot, name);
-      try {
-        const stats = fs.statSync(source);
-        if (!stats.isFile() || stats.size > MAX_UPLOAD)
-          throw new Error('Replay is not a supported file.');
-        stable = stats.size > 0 && stats.size === previousSize ? stable + 1 : 0;
-        previousSize = stats.size;
-        if (stable < 1) {
-          pending.set(name, setTimeout(check, 500));
-          return;
-        }
-        pending.delete(name);
-        db.prepare(
-          "UPDATE ReplayImports SET status = 'awaiting-reader', size = ? WHERE id = ?",
-        ).run(stats.size, id);
-        enqueue();
-      } catch (error) {
-        pending.delete(name);
-        db.prepare("UPDATE ReplayImports SET status = 'failed', error = ? WHERE id = ?").run(
-          String(error.message || error).slice(0, 1000),
-          id,
-        );
-        activity.failedAt = Date.now();
-        activity.failedName = name;
-        activity.failedReason = String(error.message || error);
-        console.warn(`Could not import watched replay ${name}:`, error);
-      }
-    };
-    pending.set(name, setTimeout(check, 500));
+  function deferDatabaseWrite(name) {
+    if (loggedBusy.has(name)) return;
+    loggedBusy.add(name);
+    console.warn(`Database busy while watching ${name}; the file will be checked again.`);
   }
 
   /**
-   * Inspect replay filenames and timestamps, prioritizing the newest file and changed pending imports.
+   * Record a watcher error and stop monitoring a file that cannot be inspected.
+   * @param state In-memory metadata for the watched replay.
+   * @param error Filesystem or validation error.
+   * @returns Nothing; preserves the error for the progress bar.
+   */
+  function failWatchedFile(state, error) {
+    if (isDatabaseBusy(error)) {
+      deferDatabaseWrite(state.name);
+      return;
+    }
+    const reason = String(error.message || error);
+    try {
+      watcherDb
+        .prepare("UPDATE ReplayImports SET status = 'failed', error = ? WHERE id = ?")
+        .run(reason.slice(0, 1000), state.id);
+    } catch (writeError) {
+      if (!isDatabaseBusy(writeError)) throw writeError;
+      deferDatabaseWrite(state.name);
+      return;
+    }
+    clearTimeout(state.timer);
+    observed.delete(state.name);
+    activity.failedAt = Date.now();
+    activity.failedName = state.name;
+    activity.failedReason = reason;
+    activity.failedSource = 'watcher';
+    console.warn(`Could not import watched replay ${state.name}:`, error);
+  }
+
+  /**
+   * Probe an early write after one second, or a stagnant file after 30 seconds.
+   * @param state In-memory metadata for the watched replay.
+   * @param early Whether the latest write arrived before the normal match interval.
+   * @returns Nothing; schedules one candidate for the serial parser queue.
+   */
+  function scheduleProbe(state, early = false) {
+    clearTimeout(state.timer);
+    const quietUntil = Math.max(state.firstSeenAt, state.modifiedAt) + 30000;
+    state.timer = setTimeout(
+      () => {
+        state.timer = null;
+        try {
+          const stats = fs.statSync(path.join(demoRoot, state.name));
+          if (!stats.isFile() || stats.size > MAX_UPLOAD)
+            throw new Error('Replay is not a supported file.');
+          if (stats.size !== state.size || stats.mtimeMs !== state.modifiedAt) {
+            observeWrite(state, stats);
+            return;
+          }
+          if (!early && Date.now() < quietUntil) {
+            scheduleProbe(state);
+            return;
+          }
+          const status = readStatus.get(state.id)?.status;
+          if (!['watching', 'awaiting-reader'].includes(status)) return;
+          watcherDb
+            .prepare(
+              "UPDATE ReplayImports SET status = 'awaiting-reader', error = NULL, size = ? WHERE id = ?",
+            )
+            .run(stats.size, state.id);
+          enqueue();
+        } catch (error) {
+          if (isDatabaseBusy(error)) {
+            deferDatabaseWrite(state.name);
+            state.timer = setTimeout(() => scheduleProbe(state, early), 1000);
+            state.timer.unref();
+          } else failWatchedFile(state, error);
+        }
+      },
+      Math.max(0, (early ? Date.now() + 1000 : quietUntil) - Date.now()),
+    );
+    state.timer.unref();
+  }
+
+  /**
+   * Reset failed parser checks after any size or timestamp change and choose the next probe.
+   * @param state In-memory metadata for the watched replay.
+   * @param stats Current replay file metadata.
+   * @returns Nothing; regular writes defer parsing while early writes prompt a check.
+   */
+  function observeWrite(state, stats) {
+    if (stats.size === state.size && stats.mtimeMs === state.modifiedAt) return;
+    const interval = stats.mtimeMs - state.modifiedAt;
+    const early = state.size > 0 && interval > 0 && interval < 19000;
+    const status = readStatus.get(state.id)?.status;
+    if (status === 'decoded' || status === 'duplicate') {
+      clearTimeout(state.timer);
+      observed.delete(state.name);
+      return;
+    }
+    if (status !== 'processing')
+      watcherDb
+        .prepare(
+          "UPDATE ReplayImports SET status = 'watching', error = NULL, size = ? WHERE id = ?",
+        )
+        .run(stats.size, state.id);
+    state.size = stats.size;
+    state.modifiedAt = stats.mtimeMs;
+    resetWatcher(state.id);
+    loggedBusy.delete(state.name);
+    if (activity.failedSource === 'watcher' && activity.failedName === state.name)
+      activity.failedAt = 0;
+    scheduleProbe(state, early);
+  }
+
+  /**
+   * Add a newly created replay without parsing its incomplete initial contents.
+   * @param name Replay filename reported by the folder watcher.
+   * @param existing Whether this file existed before application startup.
+   * @returns Nothing; starts a 30-second quiet-period timer.
+   */
+  function schedule(name, existing = false) {
+    if (!name.toLowerCase().endsWith('.replay') || known.has(name)) return;
+    const stats = fs.statSync(path.join(demoRoot, name));
+    if (!stats.isFile() || stats.size > MAX_UPLOAD) return;
+    const firstSeenAt = existing
+      ? Math.min(Date.now(), stats.birthtimeMs || stats.mtimeMs)
+      : Date.now();
+    const state = {
+      id: require('node:crypto').randomUUID().replaceAll('-', ''),
+      name,
+      size: stats.size,
+      modifiedAt: stats.mtimeMs,
+      firstSeenAt,
+      timer: null,
+    };
+    activity.detectedAt = firstSeenAt;
+    activity.detectedName = name;
+    watcherDb
+      .prepare(
+        'INSERT INTO ReplayImports (id, name, status, addedAt, size, source) VALUES (?, ?, ?, ?, ?, ?)',
+      )
+      .run(state.id, name, 'watching', new Date(firstSeenAt).toISOString(), stats.size, 'watcher');
+    known.add(name);
+    loggedBusy.delete(name);
+    observed.set(name, state);
+    scheduleProbe(state);
+  }
+
+  /**
+   * Inspect new and tracked replay files after a directory event or fallback scan.
    * @param changedName Optional filename reported by fs.watch.
-   * @returns Nothing; updates the watcher’s candidate and retry state.
+   * @returns Nothing; schedules probes only for changed files.
    */
   function scan(changedName) {
     try {
@@ -2087,39 +2225,29 @@ function startDemoWatcher(db, enqueue, wakeWatcher) {
         })
         .filter(Boolean)
         .sort((a, b) => a.modified - b.modified || a.name.localeCompare(b.name));
-      for (const { name } of newcomers) schedule(name);
-      const waiting = changedName
-        ? db
-            .prepare(
-              "SELECT id, name, size, status FROM ReplayImports WHERE source = 'watcher' AND name = ? AND ((status = 'awaiting-reader' AND error = ?) OR (status = 'failed' AND error = ?))",
-            )
-            .all(changedName, REPLAY_WAITING_MESSAGE, REPLAY_CORRUPT_MESSAGE)
-        : db
-            .prepare(
-              "SELECT id, name, size, status FROM ReplayImports WHERE source = 'watcher' AND ((status = 'awaiting-reader' AND error = ?) OR (status = 'failed' AND error = ?))",
-            )
-            .all(REPLAY_WAITING_MESSAGE, REPLAY_CORRUPT_MESSAGE);
-      for (const entry of waiting) {
-        let size;
+      for (const { name } of newcomers) {
         try {
-          size = fs.statSync(path.join(demoRoot, entry.name)).size;
-        } catch {
+          schedule(name);
+        } catch (error) {
+          if (isDatabaseBusy(error)) deferDatabaseWrite(name);
+          else console.warn(`Could not watch new replay ${name}:`, error);
+        }
+      }
+      for (const state of observed.values()) {
+        if (changedName && state.name !== changedName) continue;
+        if (!present.has(state.name)) {
+          failWatchedFile(state, new Error('Replay file is missing.'));
           continue;
         }
-        // A completed replay may only rewrite its header, leaving the size unchanged.
-        if (size === entry.size && !(entry.status === 'failed' && changedName === entry.name))
-          continue;
-        db.prepare(
-          "UPDATE ReplayImports SET status = 'awaiting-reader', error = ?, size = ? WHERE id = ?",
-        ).run(REPLAY_WAITING_MESSAGE, size, entry.id);
-        clearTimeout(wakeTimers.get(entry.name));
-        wakeTimers.set(
-          entry.name,
-          setTimeout(() => {
-            wakeTimers.delete(entry.name);
-            wakeWatcher(entry.name);
-          }, 600),
-        );
+        try {
+          const stats = fs.statSync(path.join(demoRoot, state.name));
+          if (!stats.isFile() || stats.size > MAX_UPLOAD)
+            throw new Error('Replay is not a supported file.');
+          observeWrite(state, stats);
+        } catch (error) {
+          if (isDatabaseBusy(error)) deferDatabaseWrite(state.name);
+          else failWatchedFile(state, error);
+        }
       }
     } catch (error) {
       activity.watcherError = 'Fortnite demo folder is unavailable. File watcher was disabled.';
@@ -2136,6 +2264,65 @@ function startDemoWatcher(db, enqueue, wakeWatcher) {
   });
   const scanTimer = setInterval(scan, 3000);
   scanTimer.unref();
+  for (const entry of watcherDb
+    .prepare(
+      "SELECT id, name, status, error, size, addedAt FROM ReplayImports WHERE source = 'watcher' AND (status IN ('watching', 'awaiting-reader', 'processing') OR (status = 'failed' AND error = ?)) ORDER BY addedAt",
+    )
+    .all(REPLAY_CORRUPT_MESSAGE)) {
+    if (!known.has(entry.name)) continue;
+    try {
+      const stats = fs.statSync(path.join(demoRoot, entry.name));
+      const state = {
+        id: entry.id,
+        name: entry.name,
+        size: stats.size,
+        modifiedAt: stats.mtimeMs,
+        firstSeenAt: Date.parse(entry.addedAt) || Date.now(),
+        timer: null,
+      };
+      observed.set(entry.name, state);
+      if (entry.status === 'failed' && stats.size !== entry.size) {
+        watcherDb
+          .prepare(
+            "UPDATE ReplayImports SET status = 'watching', error = NULL, size = ? WHERE id = ?",
+          )
+          .run(stats.size, entry.id);
+        scheduleProbe(state);
+      } else if (entry.status === 'watching') scheduleProbe(state);
+    } catch {
+      /* A missing startup replay is reported by its queued parser attempt. */
+    }
+  }
+  // A match can already be underway when the program starts. Recover recent
+  // existing files that have no match or pending watcher import, including a
+  // just-finished replay followed immediately by the next match.
+  const hasMatch = watcherDb.prepare('SELECT 1 FROM GameStats WHERE replayName = ? LIMIT 1');
+  const hasPending = watcherDb.prepare(
+    "SELECT 1 FROM ReplayImports WHERE source = 'watcher' AND name = ? AND (status IN ('watching', 'awaiting-reader', 'processing') OR (status = 'failed' AND error LIKE '%database is locked%')) LIMIT 1",
+  );
+  const recentFiles = [...known]
+    .map((name) => {
+      try {
+        return { name, stats: fs.statSync(path.join(demoRoot, name)) };
+      } catch {
+        return null;
+      }
+    })
+    .filter((file) => file && file.stats.mtimeMs >= Date.now() - 5 * 60 * 1000)
+    .sort((a, b) => a.stats.mtimeMs - b.stats.mtimeMs);
+  for (const { name } of recentFiles) {
+    if (observed.has(name)) continue;
+    try {
+      if (hasMatch.get(name) || hasPending.get(name)) continue;
+      known.delete(name);
+      schedule(name, true);
+    } catch (error) {
+      if (isDatabaseBusy(error)) {
+        known.delete(name);
+        deferDatabaseWrite(name);
+      } else console.warn(`Could not resume recent replay ${name}:`, error);
+    }
+  }
   console.log(`Watching Fortnite demos: ${demoRoot}`);
   return watcher;
 }
@@ -2190,13 +2377,25 @@ function replayStatus(db) {
   }
   const watched = readStatement(
     db,
-    "SELECT name FROM ReplayImports WHERE source = 'watcher' AND status IN ('watching', 'awaiting-reader', 'processing') ORDER BY addedAt LIMIT 1",
+    "SELECT name, addedAt FROM ReplayImports WHERE source = 'watcher' AND status IN ('watching', 'awaiting-reader', 'processing') ORDER BY addedAt DESC LIMIT 1",
   ).get();
   const now = Date.now();
-  if (now - activity.failedAt < 10000)
+  const latestWatchedFailure =
+    activity.failedSource === 'watcher' &&
+    activity.failedAt > 0 &&
+    !watched &&
+    activity.failedAt >= Math.max(activity.detectedAt, activity.addedAt, activity.duplicateAt);
+  const recentFailure =
+    now - activity.failedAt < 10000 &&
+    activity.failedAt >= activity.detectedAt &&
+    (!watched || watched.name === activity.failedName);
+  if (latestWatchedFailure || recentFailure)
     return {
       kind: 'error',
-      message: `Replay failed: ${activity.failedName} — ${activity.failedReason}`,
+      message:
+        activity.failedReason === REPLAY_CORRUPT_MESSAGE
+          ? REPLAY_CORRUPT_MESSAGE
+          : `Replay failed: ${activity.failedName} — ${activity.failedReason}`,
       progress: 0,
     };
   if (
@@ -2211,7 +2410,12 @@ function replayStatus(db) {
   if (now - activity.addedAt < (watched ? 1500 : 5000))
     return { kind: 'added', message: `New replay added: ${activity.addedName}`, progress: 100 };
   if (watched)
-    return { kind: 'processing', message: `New replay in progress: ${watched.name}`, progress: 50 };
+    return {
+      kind: 'processing',
+      message: `New replay in progress: ${watched.name}`,
+      progress: 50,
+      startedAt: Date.parse(watched.addedAt),
+    };
   const processing = readStatement(
     db,
     "SELECT name FROM ReplayImports WHERE status = 'processing' LIMIT 1",
@@ -3852,13 +4056,13 @@ async function main() {
   sendInstanceUrl();
   updateTray();
   process.once('exit', () => trayChild?.kill());
-  readerQueue.start();
   try {
-    startDemoWatcher(db, readerQueue.enqueue, readerQueue.wakeWatcher);
+    startDemoWatcher(readerQueue.enqueue, readerQueue.resetWatcher);
   } catch (error) {
     activity.watcherError = 'Fortnite demo folder watcher could not start.';
     console.warn(activity.watcherError, error);
   }
+  readerQueue.start();
   skinSync.scanDatabase();
   setInterval(() => skinSync.scanDatabase(), 60 * 1000).unref();
   console.log(`Sniper Hunter: ${appUrl}`);

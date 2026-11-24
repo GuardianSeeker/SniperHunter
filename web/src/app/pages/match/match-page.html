@@ -141,7 +141,9 @@
                                     <button
                                         type="button"
                                         class="member-select"
-                                        (click)="selectFromTeam(player.username, player.playerID)"
+                                        (click)="selectFromSniper(player.username, player.playerID, $event)"
+                                        (dblclick)="jumpFromSniper(player.username, player.playerID)"
+                                        [attr.aria-pressed]="selectedMemberId() === player.playerID"
                                     >
                                         <span
                                             #sniperAvatar
@@ -189,7 +191,7 @@
                 [gameID]="match.gameID"
                 [replayName]="match.replayName"
                 [activePlayerId]="activeMapPlayerId()"
-                (activePlayerChange)="activeMapPlayerId.set($event)"
+                (activePlayerChange)="selectFromMap($event)"
                 (playerJumpToTeam)="jumpFromMap($event)"
             />
 
@@ -231,9 +233,10 @@
                                         <button
                                             type="button"
                                             class="person-inline"
-                                            (click)="selectFromFeed(item.killerID)"
+                                            (click)="selectFromFeed(item.killerName, item.killerID, $event)"
+                                            (dblclick)="jumpFromFeed(item.killerName, item.killerID)"
                                             (contextmenu)="copyName(item.killerName || 'Unknown player', $event)"
-                                            (mouseenter)="showTeamTooltip(teamByPlayer().get(item.killerID), $event, killerAvatar)"
+                                            (mouseenter)="showTeamTooltip(teamByPlayer().get(item.killerID), $event, killerAvatar, item.killerPlatform || (item.killerBot ? 'AI' : 'Unknown'))"
                                             (mouseleave)="hideTeamTooltip()"
                                         >
                                             <span
@@ -254,9 +257,10 @@
                                         <button
                                             type="button"
                                             class="person-inline"
-                                            (click)="selectFromFeed(item.killedID)"
+                                            (click)="selectFromFeed(item.killedName, item.killedID, $event)"
+                                            (dblclick)="jumpFromFeed(item.killedName, item.killedID)"
                                             (contextmenu)="copyName(item.killedName || 'Unknown player', $event)"
-                                            (mouseenter)="showTeamTooltip(teamByPlayer().get(item.killedID), $event, killedAvatar)"
+                                            (mouseenter)="showTeamTooltip(teamByPlayer().get(item.killedID), $event, killedAvatar, item.killedPlatform || (item.killedBot ? 'AI' : 'Unknown'))"
                                             (mouseleave)="hideTeamTooltip()"
                                         >
                                             <span
@@ -350,7 +354,7 @@
                                                         <button
                                                             type="button"
                                                             class="member-select"
-                                                            (click)="selectFromTeam(member.username, member.playerID)"
+                                                            (click)="selectFromTeam(member.username, member.playerID, $event)"
                                                             [attr.aria-pressed]="selectedMemberId() === member.playerID"
                                                         >
                                                             <span

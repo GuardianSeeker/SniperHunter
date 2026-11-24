@@ -26,6 +26,7 @@ interface AppStatus {
   kind: string;
   message: string;
   progress: number;
+  startedAt?: number;
   addedAt?: number;
   addedSource?: string;
   autoSwitchLastMatch?: boolean;
@@ -38,6 +39,19 @@ interface Update {
   url: string;
   notes: string;
   asset: { name: string } | null;
+}
+
+/**
+ * Format elapsed time for the active replay's progress-bar message.
+ * @param startedAt Server timestamp when the replay was first detected.
+ * @param now Current browser time in Unix milliseconds.
+ * @returns Minutes and seconds, with an hour prefix for longer matches.
+ */
+function formatReplayTimer(startedAt: number, now: number): string {
+  const seconds = Math.max(0, Math.floor((now - startedAt) / 1000));
+  const minutes = Math.floor(seconds / 60);
+  const shortTime = `${minutes % 60}:${String(seconds % 60).padStart(2, '0')}`;
+  return minutes >= 60 ? `${Math.floor(minutes / 60)}:${shortTime.padStart(5, '0')}` : shortTime;
 }
 
 /** Application shell coordinating pinned navigation, progress, loading, update dialogs and local shutdown. */
@@ -61,19 +75,26 @@ export class App implements OnDestroy {
   private readonly updateService = inject(UpdateService);
   readonly access = inject(AccessService);
   readonly status = signal<AppStatus>({ kind: 'idle', message: '', progress: 0 });
+  private readonly clockNow = signal(Date.now());
   readonly restartSeconds = signal<number | null>(null);
   readonly updateRestarting = signal(false);
   /** Countdown presentation overrides status text while retaining server-reported download progress. */
-  readonly displayStatus = computed<AppStatus>(() =>
-    this.restartSeconds() === null
-      ? this.status()
-      : {
-          kind: 'updating',
-          message:
-            this.restartSeconds()! > 0 ? `Restarting in ${this.restartSeconds()}s` : 'Restarting',
-          progress: this.status().progress,
-        },
-  );
+  readonly displayStatus = computed<AppStatus>(() => {
+    const state = this.status();
+    if (this.restartSeconds() !== null)
+      return {
+        kind: 'updating',
+        message:
+          this.restartSeconds()! > 0 ? `Restarting in ${this.restartSeconds()}s` : 'Restarting',
+        progress: state.progress,
+      };
+    if (state.kind === 'processing' && Number.isFinite(state.startedAt))
+      return {
+        ...state,
+        message: `${formatReplayTimer(state.startedAt!, this.clockNow())} · ${state.message}`,
+      };
+    return state;
+  });
   readonly update = signal<Update | null>(null);
   readonly updateError = signal('');
   readonly updateInstalling = signal(false);
@@ -87,6 +108,8 @@ export class App implements OnDestroy {
   );
   /** Lightweight status polling shared by replay progress, preferences and watched-match navigation. */
   private readonly poller = setInterval(() => void this.loadStatus(), 1500);
+  /** Local second tick keeps the visible replay timer smooth without extra server requests. */
+  private readonly replayTimer = setInterval(() => this.clockNow.set(Date.now()), 1000);
   /** Router lifecycle subscription keeps the splash visible during page changes and briefly after completion. */
   private readonly navigation = this.router.events.subscribe((event) => {
     if (event instanceof NavigationStart) {
@@ -153,6 +176,7 @@ export class App implements OnDestroy {
    */
   ngOnDestroy(): void {
     clearInterval(this.poller);
+    clearInterval(this.replayTimer);
     clearInterval(this.updateStatusPoller);
     clearInterval(this.restartCountdownTimer);
     clearTimeout(this.splashTimer);

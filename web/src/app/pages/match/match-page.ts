@@ -30,6 +30,7 @@ export class MatchPage implements OnDestroy {
   private requestNumber = 0;
   private neighborRequest = 0;
   private teamTooltip: HTMLElement | null = null;
+  private feedSelectTimer: ReturnType<typeof setTimeout> | null = null;
   private matchInfoObserver?: ResizeObserver;
   /** Measured reference height for the capped snipers list on narrow layouts. */
   readonly matchInfoHeight = signal(0);
@@ -71,6 +72,15 @@ export class MatchPage implements OnDestroy {
       new Map(
         (this.details()?.teams || []).flatMap((team) =>
           team.members.map((member) => [member.playerID, team.team] as const),
+        ),
+      ),
+  );
+  /** Resolve a map marker to the match roster's canonical player name when available. */
+  readonly memberById = computed(
+    () =>
+      new Map(
+        (this.details()?.teams || []).flatMap((team) =>
+          team.members.map((member) => [member.playerID.toLowerCase(), member] as const),
         ),
       ),
   );
@@ -120,8 +130,10 @@ export class MatchPage implements OnDestroy {
    * @returns Nothing.
    */
   updateName(event: Event): void {
+    this.cancelFeedSelection();
     this.nameQuery.set((event.target as HTMLInputElement).value);
     this.selectedMemberId.set(null);
+    this.activeMapPlayerId.set(null);
   }
 
   /**
@@ -130,33 +142,128 @@ export class MatchPage implements OnDestroy {
    * @returns Nothing.
    */
   updateTeam(event: Event): void {
+    this.cancelFeedSelection();
     this.teamQuery.set((event.target as HTMLInputElement).value);
     this.selectedMemberId.set(null);
+    this.activeMapPlayerId.set(null);
   }
 
   /**
-   * Toggle the selected participant and reveal their teams-table card on selection.
-   * @param id Player account ID from the elimination feed.
+   * Clear the shared player selection, feed search, team highlight and map follow target.
    * @returns Nothing.
    */
-  selectFromFeed(id: string): void {
-    if (this.selectedMemberId() === id) {
-      this.selectedMemberId.set(null);
+  private clearPlayerSelection(): void {
+    this.cancelFeedSelection();
+    this.selectedMemberId.set(null);
+    this.activeMapPlayerId.set(null);
+    this.nameQuery.set('');
+  }
+
+  /**
+   * Synchronize one player's feed search, team/sniper highlight and map follow target.
+   * @param name Name to place in the elimination feed search.
+   * @param id Player ID shared by all match views.
+   * @param toggle Whether clicking an already selected player clears the selection.
+   * @returns Nothing; opening a collapsed feed preserves document scroll.
+   */
+  private selectPlayer(name: string, id: string, toggle = true): void {
+    this.cancelFeedSelection();
+    const playerID = /^[0-9a-f]{32}$/i.test(id) ? id.toLowerCase() : id;
+    if (toggle && this.selectedMemberId() === playerID) {
+      this.clearPlayerSelection();
       return;
     }
-    this.selectedMemberId.set(id);
+    this.nameQuery.set(name);
+    this.teamQuery.set('');
+    this.selectedMemberId.set(playerID);
+    this.activeMapPlayerId.set(playerID);
+    const pageX = window.scrollX;
+    const pageY = window.scrollY;
+    document.querySelector<HTMLDetailsElement>('.feed-panel')?.setAttribute('open', '');
+    requestAnimationFrame(() => window.scrollTo({ left: pageX, top: pageY, behavior: 'instant' }));
+  }
+
+  /**
+   * Cancel a pending feed selection before another action changes the active player.
+   * @returns Nothing; clears the timer if one is pending.
+   */
+  private cancelFeedSelection(): void {
+    if (this.feedSelectTimer) clearTimeout(this.feedSelectTimer);
+    this.feedSelectTimer = null;
+  }
+
+  /**
+   * Select a participant after the map's 150 ms double-click grace period.
+   * @param name Displayed killer or victim name.
+   * @param id Player account ID.
+   * @param event Click event used to ignore the second click of a double-click.
+   * @returns Nothing.
+   */
+  selectFromFeed(name: string, id: string, event: MouseEvent): void {
+    if (event.detail > 1) return;
+    this.cancelFeedSelection();
+    this.feedSelectTimer = setTimeout(() => {
+      this.feedSelectTimer = null;
+      this.selectPlayer(name, id);
+    }, 150);
+  }
+
+  /**
+   * Select a feed participant and reveal the matching Teams card on double-click.
+   * @param name Displayed killer or victim name.
+   * @param id Player account ID.
+   * @returns Nothing.
+   */
+  jumpFromFeed(name: string, id: string): void {
+    this.cancelFeedSelection();
+    this.selectPlayer(name, id, false);
     this.revealTeamMember(id);
   }
 
   /**
-   * Normalize a map player ID and reveal the corresponding teams-table card.
-   * @param id Player ID emitted by the map’s double-click action.
+   * Select a repeat opponent without changing the document scroll position.
+   * @param name Sniper card name.
+   * @param id Player account ID.
+   * @param event Click event used to ignore the second click of a double-click.
+   * @returns Nothing.
+   */
+  selectFromSniper(name: string, id: string, event: MouseEvent): void {
+    if (event.detail > 1) return;
+    this.selectPlayer(name, id);
+  }
+
+  /**
+   * Select a sniper and reveal their Teams card on double-click.
+   * @param name Sniper card name.
+   * @param id Player account ID.
+   * @returns Nothing.
+   */
+  jumpFromSniper(name: string, id: string): void {
+    this.selectPlayer(name, id, false);
+    this.revealTeamMember(id);
+  }
+
+  /**
+   * Apply a map selection to all other match views, or clear it when following stops.
+   * @param selection Marker ID and name, or null when deselecting.
+   * @returns Nothing.
+   */
+  selectFromMap(selection: { id: string; name: string } | null): void {
+    if (!selection) {
+      this.clearPlayerSelection();
+      return;
+    }
+    const name = this.memberById().get(selection.id.toLowerCase())?.username || selection.name;
+    this.selectPlayer(name, selection.id, false);
+  }
+
+  /**
+   * Reveal the map-selected participant in the Teams table on double-click.
+   * @param id Player ID emitted by the map.
    * @returns Nothing.
    */
   jumpFromMap(id: string): void {
-    const playerID = /^[0-9a-f]{32}$/i.test(id) ? id.toLowerCase() : id;
-    this.selectedMemberId.set(playerID);
-    this.revealTeamMember(playerID);
+    this.revealTeamMember(id);
   }
 
   /**
@@ -165,8 +272,10 @@ export class MatchPage implements OnDestroy {
    * @returns Nothing; scrolls after rendering while respecting pinned bars.
    */
   private revealTeamMember(id: string): void {
+    document.querySelector<HTMLDetailsElement>('.team-panel')?.setAttribute('open', '');
     requestAnimationFrame(() => {
-      const member = document.getElementById(`member-${id}`);
+      const playerID = /^[0-9a-f]{32}$/i.test(id) ? id.toLowerCase() : id;
+      const member = document.getElementById(`member-${playerID}`);
       if (!member) return;
       const list = member.closest<HTMLElement>('.team-members');
       if (list) {
@@ -191,14 +300,21 @@ export class MatchPage implements OnDestroy {
    * @param team Displayed team number, if known.
    * @param event Hover event providing a fallback anchor.
    * @param anchor Optional avatar element to anchor above.
+   * @param platform Optional platform code for kill-feed tooltips.
    * @returns Nothing; replaces the previous tooltip element.
    */
-  showTeamTooltip(team: number | undefined, event: MouseEvent, anchor?: HTMLElement): void {
+  showTeamTooltip(
+    team: number | undefined,
+    event: MouseEvent,
+    anchor?: HTMLElement,
+    platform?: string | null,
+  ): void {
     this.hideTeamTooltip();
     const bounds = (anchor || (event.currentTarget as HTMLElement)).getBoundingClientRect();
     const tooltip = document.createElement('span');
     tooltip.className = 'team-hover-tooltip';
-    tooltip.textContent = team === undefined ? 'Team unknown' : `Team ${team}`;
+    const teamLabel = team === undefined ? 'Team unknown' : `Team ${team}`;
+    tooltip.textContent = platform ? `${teamLabel} | ${platform}` : teamLabel;
     document.body.append(tooltip);
     const size = tooltip.getBoundingClientRect();
     const width = size.width;
@@ -221,31 +337,21 @@ export class MatchPage implements OnDestroy {
    * @returns Nothing.
    */
   ngOnDestroy(): void {
+    this.cancelFeedSelection();
     this.hideTeamTooltip();
     this.matchInfoObserver?.disconnect();
   }
 
   /**
-   * Toggle feed filtering and map following for one player while preserving document scroll.
+   * Toggle a Teams card's shared selection while ignoring the second click of a double-click.
    * @param name Player name used for the feed filter.
-   * @param id Optional player ID for card highlight and map following.
+   * @param id Player ID for card highlight and map following.
+   * @param event Teams card click event.
    * @returns Nothing.
    */
-  selectFromTeam(name: string, id?: string): void {
-    if (id && this.selectedMemberId() === id && this.nameQuery() === name) {
-      this.nameQuery.set('');
-      this.selectedMemberId.set(null);
-      this.activeMapPlayerId.set(null);
-      return;
-    }
-    this.nameQuery.set(name);
-    this.teamQuery.set('');
-    this.selectedMemberId.set(id || null);
-    this.activeMapPlayerId.set(id || null);
-    const pageX = window.scrollX,
-      pageY = window.scrollY;
-    document.querySelector<HTMLDetailsElement>('.feed-panel')?.setAttribute('open', '');
-    requestAnimationFrame(() => window.scrollTo({ left: pageX, top: pageY, behavior: 'instant' }));
+  selectFromTeam(name: string, id: string, event: MouseEvent): void {
+    if (event.detail > 1) return;
+    this.selectPlayer(name, id);
   }
 
   /**
@@ -257,6 +363,7 @@ export class MatchPage implements OnDestroy {
     this.teamQuery.set(String(team));
     this.nameQuery.set('');
     this.selectedMemberId.set(null);
+    this.activeMapPlayerId.set(null);
     document.querySelector<HTMLDetailsElement>('.feed-panel')?.setAttribute('open', '');
   }
 
